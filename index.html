@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f5f2eb">
+<title>∞ Canvas 0.01</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-tool="select">
+
+<div id="grid"></div>
+<canvas id="preview-canvas"></canvas>
+<div id="sel-rect"></div>
+
+<div id="topbar">
+  <div class="pill" id="title-pill">∞ Canvas</div>
+  <div class="pill" id="zoom-pill">100%</div>
+</div>
+
+<div id="ctx">
+  <div class="citem" data-action="front">↑ 맨 앞으로</div>
+  <div class="citem" data-action="back">↓ 맨 뒤로</div>
+  <div class="cdiv"></div>
+  <div class="citem" data-action="dup">⊞ 복제</div>
+  <div class="cdiv"></div>
+  <div class="citem danger" data-action="del">✕ 삭제</div>
+</div>
+
+<div id="snack"></div>
+
+<div id="viewport">
+  <div id="board">
+    <svg id="svg-layer"></svg>
+  </div>
+</div>
+
+<canvas id="minimap" width="130" height="84"></canvas>
+
+<!-- ══ PEN SETTINGS PANEL ══ -->
+<div id="pen-panel">
+  <div class="pp-title">
+    <span id="pp-title-txt">✏️ 펜 설정</span>
+    <button class="pp-x" id="pp-close-btn">✕</button>
+  </div>
+  <div class="pp-sect">
+    <div class="pp-lbl">펜 안정화 (smoothing)</div>
+    <div class="pp-row">
+      <input type="range" id="pp-smooth" min="0" max="20" step="1" value="0">
+      <span class="pp-num" id="pp-smooth-v">0</span>
+    </div>
+    <div class="pp-chips" id="pp-sc">
+      <button class="pp-chip pp-on" data-smooth="0">없음</button>
+      <button class="pp-chip" data-smooth="5">약간</button>
+      <button class="pp-chip" data-smooth="10">보통</button>
+      <button class="pp-chip" data-smooth="18">강함</button>
+    </div>
+  </div>
+  <div class="pp-sect">
+    <div class="pp-lbl">불투명도 (opacity)</div>
+    <div class="pp-row">
+      <input type="range" id="pp-opacity" min="5" max="100" step="5" value="100">
+      <span class="pp-num" id="pp-opacity-v">100%</span>
+    </div>
+  </div>
+  <div class="pp-sect" id="pp-cap-sect">
+    <div class="pp-lbl">선 끝 모양 (linecap)</div>
+    <div class="pp-caps">
+      <button class="pp-cap pp-on" data-cap="round">
+        <svg width="30" height="10"><line x1="5" y1="5" x2="25" y2="5" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
+        <span>둥글게</span>
+      </button>
+      <button class="pp-cap" data-cap="square">
+        <svg width="30" height="10"><line x1="5" y1="5" x2="25" y2="5" stroke="currentColor" stroke-width="5" stroke-linecap="square"/></svg>
+        <span>각지게</span>
+      </button>
+      <button class="pp-cap" data-cap="butt">
+        <svg width="30" height="10"><line x1="7" y1="5" x2="23" y2="5" stroke="currentColor" stroke-width="5" stroke-linecap="butt"/></svg>
+        <span>짧게</span>
+      </button>
+    </div>
+  </div>
+  <div class="pp-sect" id="pp-pressure-sect">
+    <div class="pp-lbl">끝 처리 (taper)</div>
+    <div class="pp-chips" id="pp-pc">
+      <button class="pp-chip pp-on" data-pressure="none">없음</button>
+      <button class="pp-chip" data-pressure="start">시작</button>
+      <button class="pp-chip" data-pressure="end">끝</button>
+      <button class="pp-chip" data-pressure="both">양쪽</button>
+    </div>
+  </div>
+  <div class="pp-sect">
+    <div class="pp-lbl">미리보기</div>
+    <div id="pp-preview-wrap">
+      <svg id="pp-preview-svg" viewBox="0 0 200 42" preserveAspectRatio="none">
+        <path id="pp-preview-path"
+          d="M10,30 Q30,10 50,22 Q70,34 90,18 Q110,8 130,22 Q150,34 170,16 Q185,8 192,14"
+          fill="none" stroke="#1a1714" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOOLBAR (가로 통일) ══ -->
+<div id="toolbar">
+  <div id="tb-drag-handle">⠿</div>
+  <div id="tb-tools">
+    <button class="tbtn active" id="t-select" data-tip="선택 (V)" data-tool="select">⊹</button>
+    <button class="tbtn" id="t-edit" data-tip="편집 (D)" data-tool="edit">✎</button>
+    <button class="tbtn" id="t-pan" data-tip="이동 (H)" data-tool="pan">✋</button>
+    <div class="sep"></div>
+    <button class="tbtn" id="t-pen"       data-tip="펜 (P) · 재클릭 → 설정"       data-tool-or-panel="pen">✏️</button>
+    <button class="tbtn" id="t-highlight" data-tip="형광펜 (L) · 재클릭 → 설정"    data-tool-or-panel="highlight">🖊️</button>
+    <button class="tbtn" id="t-eraser"    data-tip="지우개 (E) · 재클릭 → 설정"    data-tool-or-panel="eraser">◻</button>
+    <div class="sep"></div>
+    <button class="tbtn" id="t-sticky" data-tip="포스트잇 (S)"  data-action="addSticky">📄</button>
+    <button class="tbtn" id="t-card"   data-tip="카드 창 (W)"   data-action="addCard">🪟</button>
+    <button class="tbtn" id="t-text"   data-tip="텍스트 (T)"    data-tool="text">T</button>
+    <button class="tbtn" id="t-rect"   data-tip="사각형 (R)"    data-tool="rect">□</button>
+    <button class="tbtn" id="t-circle" data-tip="원 (C)"        data-tool="circle">○</button>
+    <button class="tbtn" id="t-arrow"  data-tip="화살표 (A)"    data-tool="arrow">→</button>
+    <div class="sep"></div>
+    <button class="tbtn" data-tip="이미지" data-action="addImage">🖼️</button>
+    <button class="tbtn" data-tip="그리드 (G)"  data-action="toggleGrid">⊞</button>
+
+    <!-- ═══ NEW: Undo / Redo 버튼 ═══ -->
+    <div class="sep"></div>
+    <button class="tbtn undo-redo-btn" id="t-undo" data-tip="실행 취소 (Ctrl+Z)" data-action="undo">↩</button>
+    <button class="tbtn undo-redo-btn" id="t-redo" data-tip="다시 실행 (Ctrl+Shift+Z)" data-action="redo">↪</button>
+    <!-- ═══ END NEW ═══ -->
+
+    <div class="sep"></div>
+    <button class="tbtn" data-tip="저장 Ctrl+S" data-action="save">💾</button>
+    <button class="tbtn" data-tip="불러오기"     data-action="load">📂</button>
+    <button class="tbtn" data-tip="전체 지우기"  data-action="clearAll">🗑️</button>
+  </div>
+</div>
+
+
+<!-- ══ COLOR BAR (그리기 도구 선택 시 나타남) ══ -->
+<div id="color-bar">
+  <div class="cdot active" style="background:#1a1714" data-c="#1a1714"></div>
+  <div class="cdot" style="background:#c84b2f" data-c="#c84b2f"></div>
+  <div class="cdot" style="background:#2b6cb0" data-c="#2b6cb0"></div>
+  <div class="cdot" style="background:#2d8a4e" data-c="#2d8a4e"></div>
+  <div class="cdot" style="background:#7c3d9e" data-c="#7c3d9e"></div>
+  <div class="cdot" style="background:#e8a320" data-c="#e8a320"></div>
+  <div class="cb-sep"></div>
+  <button class="sbtn active" data-sw="2"><div class="sline" style="height:2px"></div></button>
+  <button class="sbtn"        data-sw="5"><div class="sline" style="height:4px"></div></button>
+  <button class="sbtn"        data-sw="10"><div class="sline" style="height:7px"></div></button>
+</div>
+
+<input type="file" id="img-in"  accept="image/*" style="display:none">
+<input type="file" id="load-in" style="display:none">
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
