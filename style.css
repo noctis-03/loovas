@@ -418,7 +418,7 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
 }
 
 
-/* ═══ Tool Orb v2 ═══ */
+/* ═══ Tool Orb v3 — 고정 위치, 따라다니지 않음 ═══ */
 
 #tool-orb {
   position: fixed;
@@ -426,7 +426,7 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: rgba(26, 23, 20, 0.82);
+  background: rgba(26, 23, 20, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
@@ -435,10 +435,14 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
   pointer-events: auto;
   touch-action: none;
   cursor: grab;
+
   opacity: 0;
+  visibility: hidden;
   transform: translate(-200px, -200px);
-  transition: opacity 0.18s ease, box-shadow 0.18s ease;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  transition: opacity 0.2s ease, visibility 0.2s ease,
+              box-shadow 0.18s ease, background 0.18s ease;
+
+  box-shadow: 0 2px 12px rgba(0,0,0,0.22);
   will-change: transform, opacity;
   user-select: none;
   -webkit-user-select: none;
@@ -446,21 +450,27 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
 
 #tool-orb.orb-visible {
   opacity: 1;
+  visibility: visible;
 }
 
 #tool-orb.orb-active {
   cursor: grabbing;
-  background: rgba(200, 75, 47, 0.9);
-  box-shadow: 0 4px 24px rgba(200, 75, 47, 0.35);
-  transform-origin: center;
+  background: rgba(200, 75, 47, 0.92);
+  box-shadow: 0 4px 24px rgba(200, 75, 47, 0.4);
 }
 
 #tool-orb.orb-tool-active {
-  box-shadow: 0 0 0 3px rgba(200, 75, 47, 0.5), 0 2px 12px rgba(0,0,0,0.18);
+  box-shadow: 0 0 0 3px rgba(200, 75, 47, 0.55),
+              0 2px 14px rgba(0,0,0,0.22);
+}
+
+#tool-orb.orb-active.orb-tool-active {
+  box-shadow: 0 0 0 3px rgba(200, 75, 47, 0.55),
+              0 4px 24px rgba(200, 75, 47, 0.4);
 }
 
 #tool-orb-label {
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1;
   color: #fff;
   pointer-events: none;
@@ -468,13 +478,13 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
   -webkit-user-select: none;
 }
 
-/* Ghost preview for tool drag */
+/* Ghost preview */
 #orb-preview-ghost {
   position: fixed;
   z-index: 99998;
   pointer-events: none;
   border-radius: 10px;
-  background: rgba(200, 75, 47, 0.15);
+  background: rgba(200, 75, 47, 0.12);
   border: 2px solid rgba(200, 75, 47, 0.5);
   display: flex;
   align-items: center;
@@ -490,11 +500,12 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
   transform: translate(-50%, -50%) scale(1.15);
 }
 
-/* Toolbar zoom during orb drag */
+/* Toolbar zoom */
 #toolbar.tb-orb-zoom {
   transform: scale(1.04);
   transition: transform 0.2s ease;
 }
+
 
 /* ══════════════════════════════════════════════════════
    Toolbar — Orb 드래그 모드 진입 시 확대 + 둥실 애니메이션
