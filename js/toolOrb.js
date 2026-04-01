@@ -523,7 +523,26 @@ function handleToolDragMove(e) {
 }
 
 function finishToolDrag() {
+  const wasColorMode = ctx.colorMode;
   const selectedTool = ctx.previewTool;
+
+  // 색상 모드 정리
+  if (orb) orb.classList.remove('orb-color-mode');
+  highlightColorBar(false);
+  clearColorHighlight();
+
+  if (wasColorMode) {
+    // ★ 색상만 바꾸고 현재 도구/활성 상태 유지
+    updateLabel(pendingTool || tool);
+    if (_toolActivated) {
+      transition(State.SHOWN);
+    } else {
+      transition(State.SHOWN);
+    }
+    return;
+  }
+
+  // 기존 도구 전환 로직
   const isDrawing = selectedTool && !NO_ORB_TOOLS.has(selectedTool);
 
   if (selectedTool) {
@@ -531,7 +550,6 @@ function finishToolDrag() {
   }
 
   if (isDrawing) {
-    // ★ 도구 전환 후 바로 사용 가능하도록 활성화 유지
     activatePending();
     _toolActivated = true;
     if (orb) orb.classList.add('orb-tool-active');
