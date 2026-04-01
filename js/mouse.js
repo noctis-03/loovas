@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════
 //  mouse.js — 마우스 이벤트 핸들링
 //
-//  UPDATE: orbLock 활성 시 모든 도구 동작 차단
+//  UPDATE: orbLock → isOrbLocked() 함수 호출로 변경
 // ═══════════════════════════════════════════════════
 
 import * as S from './state.js';
@@ -13,12 +13,11 @@ import { addText } from './text.js';
 import { updateMinimap } from './layout.js';
 import { focusEditable } from './edit.js';
 import { pushState } from './history.js';
-import { orbLock } from './toolOrb.js';  // ← NEW
+import { isOrbLocked } from './toolOrb.js';
 
 let justFinishedLasso = false;
 
 export function initMouseEvents() {
-  // Wheel zoom
   S.vp.addEventListener('wheel', e => {
     e.preventDefault(); closeCtx();
     const f = e.deltaY < 0 ? 1.09 : 0.92;
@@ -30,9 +29,8 @@ export function initMouseEvents() {
     S.T.s = ns; applyT();
   }, { passive: false });
 
-  // Mouse down
   S.vp.addEventListener('mousedown', e => {
-    if (orbLock) return;   // ★ Orb 드래그 중 차단
+    if (isOrbLocked()) return;
     if (e.button === 2) return;
     closeCtx();
 
@@ -74,9 +72,8 @@ export function initMouseEvents() {
     }
   });
 
-  // Mouse move
   window.addEventListener('mousemove', e => {
-    if (orbLock) return;   // ★ Orb 드래그 중 차단
+    if (isOrbLocked()) return;
     justFinishedLasso = false;
 
     if (S.panning) {
@@ -107,9 +104,8 @@ export function initMouseEvents() {
     if ((S.tool === 'rect' || S.tool === 'circle' || S.tool === 'arrow') && S.shapeA) previewShape(S.shapeA, bp);
   });
 
-  // Mouse up
   window.addEventListener('mouseup', e => {
-    if (orbLock) return;   // ★ Orb 드래그 중 차단
+    if (isOrbLocked()) return;
     document.body.classList.remove('panning');
     if (S.panning) { S.setPanning(false); return; }
     if (S.dragging) { S.setDragging(null); updateMinimap(); pushState(); return; }
