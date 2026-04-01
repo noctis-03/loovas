@@ -1,12 +1,11 @@
 // ═══════════════════════════════════════════════════
-//  toolOrb.js — 고정 위치 도구 Orb (v3)
+//  toolOrb.js — 고정 위치 도구 Orb (v3.1)
 //
-//  - 이동 모드에서는 Orb를 표시하지 않음
+//  - 이동 모드에서는 Orb 미표시
 //  - 탭으로 도구 활성화 시 탭 위치 근처에 Orb 생성 (고정)
 //  - Orb는 포인터를 따라다니지 않음
-//  - 수평 드래그로 도구 순환, 수직 드래그로 Orb 위치 재배치
-//  - 싱글탭으로 활성/비활성 토글
-//  - 일정 시간 후 pan 복귀 + Orb 숨김
+//  - 수평 드래그로 도구 순환, 수직 드래그로 위치 재배치
+//  - 도구 변경 시 Orb 타이머 초기화 및 유지
 // ═══════════════════════════════════════════════════
 
 import { tool, pendingTool } from './state.js';
@@ -15,22 +14,22 @@ import { setTool, activatePending, revertToPan } from './tools.js';
 // ── 설정 ──
 const NO_ORB_TOOLS   = new Set(['text', 'edit', 'pan', 'select']);
 const ORB_SIZE        = 48;
-const SPAWN_OFFSET_X  = -40;  // 탭 위치 기준 Orb 생성 오프셋
+const SPAWN_OFFSET_X  = -40;
 const SPAWN_OFFSET_Y  = -50;
 const DRAG_THRESH     = 28;
 const DIR_LOCK_DIST   = 14;
 const LONGPRESS_MS    = 400;
-const HIDE_DELAY_TOOL = 6000;  // 도구 활성 후 자동 복귀
-const HIDE_DELAY_USE  = 3000;  // 그리기 완료 후
+const HIDE_DELAY_TOOL = 6000;
+const HIDE_DELAY_USE  = 3000;
 const TAP_TIME_THRESH = 280;
 
-// ── FSM 상태 ──
+// ── FSM ──
 const State = Object.freeze({
   HIDDEN:     'hidden',
-  SHOWN:      'shown',       // Orb 표시 중 (고정 위치)
-  HOLD:       'hold',        // Orb 위에서 포인터 다운
-  RELOCATING: 'relocating',  // 수직 → Orb 위치 이동
-  TOOL_DRAG:  'toolDrag',    // 수평 → 도구 순환
+  SHOWN:      'shown',
+  HOLD:       'hold',
+  RELOCATING: 'relocating',
+  TOOL_DRAG:  'toolDrag',
 });
 
 let fsm = State.HIDDEN;
@@ -77,6 +76,12 @@ function isTouchDevice() {
   return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 }
 
+/** Orb가 현재 화면에 보이는 상태인지 */
+function isOrbVisible() {
+  return fsm === State.SHOWN || fsm === State.HOLD ||
+         fsm === State.RELOCATING || fsm === State.TOOL_DRAG;
+}
+
 // ═══════════════════════════════════════════════════
 //  외부 API
 // ═══════════════════════════════════════════════════
@@ -87,21 +92,40 @@ export { _orbLock as orbLock };
 export function isToolActivated() { return _toolActivated; }
 export { _toolActivated as toolActivated };
 
-/** tools.js에서 도구 변경 시 호출 */
+/**
+ * tools.js에서 도구 변경 시 호출
+ *
+ * ★ 핵심 변경: Orb가 보이는 상태에서 그리기 도구로 전환하면
+ *   Orb를 유지하고 타이머만 리셋한다.
+ */
 export function notifyToolChanged(t) {
   updateLabel(t);
+
+  // select/pan/edit 등 비그리기 도구 → Orb 숨김
+  if (NO_ORB_TOOLS.has(t)) {
+    _toolActivated = false;
+    if (orb) orb.classList.remove('orb-tool-active');
+    transition(State.HIDDEN);
+    return;
+  }
+
+  // 그리기 도구로 변경됨
+  if (isOrbVisible()) {
+    // ★ Orb가 보이는 중 → 유지 + 타이머 초기화
+    // pendingTool이 갱신되었으므로 활성 상태도 유지
+    _toolActivated = false;  // 새 도구이므로 아직 미활성 (탭 필요)
+    if (orb) orb.classList.remove('orb-tool-active');
+    scheduleHide(HIDE_DELAY_TOOL);
+    return;
+  }
+
+  // Orb가 숨겨진 상태 → 그대로 숨김 유지 (탭으로 활성화해야 함)
   _toolActivated = false;
   if (orb) orb.classList.remove('orb-tool-active');
-  if (NO_ORB_TOOLS.has(t)) {
-    transition(State.HIDDEN);
-  }
 }
 
 /**
  * 터치 탭으로 도구 활성화 + Orb 생성
- * @param {number} tx - 탭 X 좌표 (screen)
- * @param {number} ty - 탭 Y 좌표 (screen)
- * @returns {boolean} 활성화 성공 여부
  */
 export function tryActivateByTap(tx, ty) {
   if (!pendingTool) return false;
@@ -110,15 +134,20 @@ export function tryActivateByTap(tx, ty) {
   activatePending();
   _toolActivated = true;
 
-  // Orb를 탭 위치 근처에 생성
-  spawnOrbAt(tx + SPAWN_OFFSET_X, ty + SPAWN_OFFSET_Y);
+  if (isOrbVisible()) {
+    // ★ Orb가 이미 보이면 위치 유지, 상태만 갱신 + 타이머 리셋
+    if (orb) orb.classList.add('orb-tool-active');
+    updateLabel(pendingTool);
+    scheduleHide(HIDE_DELAY_TOOL);
+  } else {
+    // Orb가 숨겨진 상태 → 탭 위치에 생성
+    spawnOrbAt(tx + SPAWN_OFFSET_X, ty + SPAWN_OFFSET_Y);
+  }
 
   return true;
 }
 
-/**
- * 이미 활성 상태에서 재탭 시 → Orb 토글 (비활성화)
- */
+/** Orb 탭으로 비활성화 */
 export function deactivateByTap() {
   if (!_toolActivated) return;
   revertToPan();
@@ -126,16 +155,35 @@ export function deactivateByTap() {
   transition(State.HIDDEN);
 }
 
-/** 그리기 완료 후 호출 */
+/** 그리기 완료 후 */
 export function scheduleRevertAfterUse() {
   if (!pendingTool || !_toolActivated) return;
   scheduleHide(HIDE_DELAY_USE);
 }
 
-/** 도형 무시 시에도 revert 보장 */
+/** 도형 무시 시 revert 보장 */
 export function ensureRevertIfNeeded() {
   if (pendingTool && _toolActivated) {
     scheduleHide(HIDE_DELAY_USE);
+  }
+}
+
+/**
+ * ★ 외부에서 호출: 도구 사용 중 타이머 리셋
+ *   (그리기 시작 시 호출하면 그리는 동안 Orb가 사라지지 않음)
+ */
+export function resetOrbTimer() {
+  if (isOrbVisible() && _toolActivated) {
+    cancelHideTimer();
+  }
+}
+
+/**
+ * ★ 외부에서 호출: 도구 사용 완료 후 타이머 재시작
+ */
+export function restartOrbTimer(delay) {
+  if (isOrbVisible()) {
+    scheduleHide(delay || HIDE_DELAY_USE);
   }
 }
 
@@ -168,15 +216,13 @@ export function initToolOrb() {
 }
 
 // ═══════════════════════════════════════════════════
-//  Orb 생성 (탭 위치에 고정)
+//  Orb 생성
 // ═══════════════════════════════════════════════════
 
 function spawnOrbAt(x, y) {
-  // 화면 밖 보정
   const half = ORB_SIZE / 2;
   orbX = Math.max(half, Math.min(x, window.innerWidth - half));
   orbY = Math.max(half, Math.min(y, window.innerHeight - half));
-
   applyPosition();
   transition(State.SHOWN);
 }
@@ -252,7 +298,7 @@ function enterState(s) {
 }
 
 // ═══════════════════════════════════════════════════
-//  Orb 포인터 이벤트
+//  Orb 포인터
 // ═══════════════════════════════════════════════════
 
 function onOrbPointerDown(e) {
@@ -285,7 +331,7 @@ function onOrbPointerDown(e) {
 }
 
 // ═══════════════════════════════════════════════════
-//  전역 포인터 이벤트
+//  전역 포인터
 // ═══════════════════════════════════════════════════
 
 function onGlobalMove(e) {
@@ -335,7 +381,6 @@ function onGlobalMove(e) {
       orbX = ctx.orbStartX + dx;
       orbY = ctx.orbStartY + dy;
 
-      // 화면 밖 보정
       const half = ORB_SIZE / 2;
       orbX = Math.max(half, Math.min(orbX, window.innerWidth - half));
       orbY = Math.max(half, Math.min(orbY, window.innerHeight - half));
@@ -363,14 +408,14 @@ function onGlobalUp(e) {
       const elapsed = Date.now() - (ctx.downTime || 0);
 
       if (elapsed < TAP_TIME_THRESH) {
-        // 싱글탭: 도구 활성/비활성 토글
         handleOrbSingleTap();
-      }
-
-      if (_toolActivated) {
-        transition(State.SHOWN);
       } else {
-        transition(State.HIDDEN);
+        // 롱프레스가 도구드래그로 안 갔으면 그냥 유지
+        if (_toolActivated) {
+          transition(State.SHOWN);
+        } else {
+          transition(State.HIDDEN);
+        }
       }
       break;
     }
@@ -392,19 +437,25 @@ function onGlobalUp(e) {
 // ═══════════════════════════════════════════════════
 
 function handleOrbSingleTap() {
-  if (!pendingTool) return;
+  if (!pendingTool) {
+    transition(State.HIDDEN);
+    return;
+  }
 
   if (_toolActivated) {
+    // 활성 → 비활성
     revertToPan();
     _toolActivated = false;
     if (orb) orb.classList.remove('orb-tool-active');
     updateLabel(pendingTool);
+    transition(State.HIDDEN);
   } else {
+    // 비활성 → 활성
     activatePending();
     _toolActivated = true;
     if (orb) orb.classList.add('orb-tool-active');
     updateLabel(pendingTool);
-    scheduleHide(HIDE_DELAY_TOOL);
+    transition(State.SHOWN);
   }
 }
 
@@ -433,18 +484,29 @@ function handleToolDragMove(e) {
 
 function finishToolDrag() {
   const selectedTool = ctx.previewTool;
+  const isDrawing = selectedTool && !NO_ORB_TOOLS.has(selectedTool);
 
-  // exitState에서 orbLock 해제
+  // exitState에서 orbLock 해제, preview 정리
+
   if (selectedTool) {
     setTool(selectedTool);
+    // setTool → notifyToolChanged가 호출됨
+    // notifyToolChanged에서 isOrbVisible() 체크 시
+    // 아직 TOOL_DRAG 상태이므로 true → Orb 유지 + 타이머 리셋
   }
 
-  updateLabel(selectedTool || pendingTool || tool);
-  _toolActivated = false;
-  if (orb) orb.classList.remove('orb-tool-active');
-
-  // 도구 전환 후 HIDDEN으로 (pan 모드이므로 Orb 불필요)
-  transition(State.HIDDEN);
+  // ★ 그리기 도구로 전환 → Orb 유지, 미활성 상태 (탭으로 활성화)
+  if (isDrawing) {
+    _toolActivated = false;
+    if (orb) orb.classList.remove('orb-tool-active');
+    updateLabel(selectedTool);
+    transition(State.SHOWN);
+  } else {
+    // 비그리기 도구 → Orb 숨김
+    _toolActivated = false;
+    if (orb) orb.classList.remove('orb-tool-active');
+    transition(State.HIDDEN);
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -560,7 +622,7 @@ function updateLabel(t) {
 }
 
 // ═══════════════════════════════════════════════════
-//  위치 적용 (고정, 애니메이션 없음)
+//  위치 (고정)
 // ═══════════════════════════════════════════════════
 
 function applyPosition() {
