@@ -1,5 +1,13 @@
 // ═══════════════════════════════════════════════════
-//  toolOrb.js — 고정 위치 도구 Orb (v3.2 — 버그 수정)
+//  toolOrb.js — 고정 위치 도구 Orb (v3.2)
+//
+//  - 이동 모드에서는 Orb 미표시
+//  - 탭으로 도구 활성화 시 탭 위치 근처에 Orb 생성 (고정)
+//  - Orb는 포인터를 따라다니지 않음
+//  - 수평 드래그로 도구 순환, 수직 드래그로 위치 재배치
+//  - 아래로 드래그 시 색상 선택 모드
+//  - 도구 변경 시 Orb 타이머 초기화 및 유지
+//  - 그리기 도구 사용 중 타이머 리셋
 // ═══════════════════════════════════════════════════
 
 import { tool, pendingTool } from './state.js';
@@ -63,42 +71,34 @@ let orbY = -200;
 let hideTimer = null;
 let longPressTimer = null;
 
-// ── 내부 상태 ──
+// ── 외부 상태 ──
 let _orbLock = false;
 let _toolActivated = false;
-
-// ── finishToolDrag 중 notifyToolChanged 무시 플래그 ──
-let _suppressNotify = false;
 
 function isTouchDevice() {
   return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 }
 
+/** Orb가 현재 화면에 보이는 상태인지 */
 function isOrbVisible() {
   return fsm === State.SHOWN || fsm === State.HOLD ||
          fsm === State.RELOCATING || fsm === State.TOOL_DRAG;
 }
 
 // ═══════════════════════════════════════════════════
-//  외부 API (함수로만 노출 — 바인딩 문제 없음)
+//  외부 API
 // ═══════════════════════════════════════════════════
 
-export function isOrbLocked()     { return _orbLock; }
+export function isOrbLocked() { return _orbLock; }
+export { _orbLock as orbLock };
+
 export function isToolActivated() { return _toolActivated; }
+export { _toolActivated as toolActivated };
 
-// ★ 하위호환: 기존 코드에서 import { orbLock } / import { toolActivated } 하는 경우 대비
-// getter 객체로 우회
-const _proxy = {};
-Object.defineProperty(_proxy, 'orbLock',       { get() { return _orbLock; } });
-Object.defineProperty(_proxy, 'toolActivated', { get() { return _toolActivated; } });
-export const orbLock       = _proxy.orbLock;       // 항상 false — 함수 사용 권장
-export const toolActivated = _proxy.toolActivated; // 항상 false — 함수 사용 권장
-// ↑ 주의: 이 export는 초기값만 전달됨. 반드시 isOrbLocked() / isToolActivated() 사용할 것.
-
+/**
+ * tools.js에서 도구 변경 시 호출
+ */
 export function notifyToolChanged(t) {
-  // finishToolDrag 내부에서 setTool 호출 시 재진입 방지
-  if (_suppressNotify) return;
-
   updateLabel(t);
 
   if (NO_ORB_TOOLS.has(t)) {
@@ -108,7 +108,6 @@ export function notifyToolChanged(t) {
     return;
   }
 
-  // 그리기 도구 + Orb 보이는 중 → 유지 + 타이머 리셋
   if (isOrbVisible()) {
     if (orb) orb.classList.toggle('orb-tool-active', _toolActivated);
     scheduleHide(HIDE_DELAY_TOOL);
@@ -119,6 +118,9 @@ export function notifyToolChanged(t) {
   if (orb) orb.classList.remove('orb-tool-active');
 }
 
+/**
+ * 터치 탭으로 도구 활성화 + Orb 생성
+ */
 export function tryActivateByTap(tx, ty) {
   if (!pendingTool) return false;
   if (_toolActivated) return true;
@@ -137,6 +139,7 @@ export function tryActivateByTap(tx, ty) {
   return true;
 }
 
+/** Orb 탭으로 비활성화 */
 export function deactivateByTap() {
   if (!_toolActivated) return;
   revertToPan();
@@ -144,23 +147,31 @@ export function deactivateByTap() {
   transition(State.HIDDEN);
 }
 
+/** 그리기 완료 후 */
 export function scheduleRevertAfterUse() {
   if (!pendingTool || !_toolActivated) return;
   scheduleHide(HIDE_DELAY_USE);
 }
 
+/** 도형 무시 시 revert 보장 */
 export function ensureRevertIfNeeded() {
   if (pendingTool && _toolActivated) {
     scheduleHide(HIDE_DELAY_USE);
   }
 }
 
+/**
+ * 도구 사용 중 타이머 리셋 (그리기 시작 시 호출)
+ */
 export function resetOrbTimer() {
   if (isOrbVisible()) {
     cancelHideTimer();
   }
 }
 
+/**
+ * 도구 사용 완료 후 타이머 재시작
+ */
 export function restartOrbTimer(delay) {
   if (isOrbVisible()) {
     scheduleHide(delay || HIDE_DELAY_USE);
@@ -212,7 +223,6 @@ function spawnOrbAt(x, y) {
 // ═══════════════════════════════════════════════════
 
 function transition(newState, data) {
-  if (fsm === newState && !data) return; // 같은 상태 재진입 방지
   exitState(fsm);
   fsm = newState;
   ctx = data || {};
@@ -224,28 +234,19 @@ function exitState(s) {
     case State.HOLD:
       cancelLongPress();
       break;
-     case State.TOOL_DRAG: {
-      cancelHideTimer();
-      _orbLock = true;
-      if (orb) orb.classList.add('orb-active');
-
-      const baseTool = pendingTool || tool;
-      const order = getToolOrder();
-      ctx.baseIdx = order.indexOf(baseTool);
-      if (ctx.baseIdx === -1) ctx.baseIdx = 0;
-      ctx.steps = 0;
-      ctx.previewTool = baseTool;
-      ctx.colorMode = false;          // ★ 추가: 색상 모드 초기화
-      ctx.colorBaseResolved = false;   // ★ 추가: 색상 기준 인덱스 초기화
-
-      updateLabel(baseTool);
+    case State.TOOL_DRAG:
+      _orbLock = false;
+      if (orb) {
+        orb.classList.remove('orb-active');
+        orb.classList.remove('orb-color-mode');
+      }
+      clearPreviewHighlight();
+      clearColorHighlight();
+      highlightColorBar(false);
       const tb = document.getElementById('toolbar');
-      if (tb) tb.classList.add('tb-orb-zoom');
-      previewToolHighlight(baseTool);
+      if (tb) tb.classList.remove('tb-orb-zoom');
       break;
-    }
-
-}
+  }
 }
 
 function enterState(s) {
@@ -278,11 +279,17 @@ function enterState(s) {
 
       const baseTool = pendingTool || tool;
       const order = getToolOrder();
+
+      // ctx.startX, ctx.startY는 transition 호출 시 data로 전달됨
+      // 여기서는 도구 순환용 필드만 추가
       ctx.baseIdx = order.indexOf(baseTool);
       if (ctx.baseIdx === -1) ctx.baseIdx = 0;
       ctx.steps = 0;
       ctx.previewTool = baseTool;
       ctx.colorMode = false;
+      ctx.colorBaseResolved = false;
+      ctx.colorSteps = 0;
+      ctx.previewColorIdx = -1;
 
       updateLabel(baseTool);
       const tb = document.getElementById('toolbar');
@@ -316,16 +323,17 @@ function onOrbPointerDown(e) {
     dirLocked: false,
   });
 
-    longPressTimer = setTimeout(() => {
+  longPressTimer = setTimeout(() => {
     longPressTimer = null;
     if (fsm === State.HOLD && !ctx.dirLocked) {
+      // ★ startX, startY 모두 전달
       transition(State.TOOL_DRAG, {
         startX: ctx.startX,
-        startY: ctx.startY,       // ★ 추가
+        startY: ctx.startY,
       });
     }
   }, LONGPRESS_MS);
-
+}
 
 // ═══════════════════════════════════════════════════
 //  전역 포인터
@@ -353,13 +361,15 @@ function onGlobalMove(e) {
         ctx.dirLocked = true;
         cancelLongPress();
 
-               if (Math.abs(dx) > Math.abs(dy)) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          // 수평 → 도구 순환
+          // ★ startX, startY 모두 전달
           transition(State.TOOL_DRAG, {
             startX: ctx.startX,
-            startY: ctx.startY,   // ★ 추가
+            startY: ctx.startY,
           });
         } else {
-
+          // 수직 → 위치 이동
           transition(State.RELOCATING, {
             startX: ctx.startX,
             startY: ctx.startY,
@@ -456,20 +466,20 @@ function handleOrbSingleTap() {
 }
 
 // ═══════════════════════════════════════════════════
-//  도구 순환 드래그
+//  도구 순환 드래그 + 색상 모드
 // ═══════════════════════════════════════════════════
 
 function handleToolDragMove(e) {
   const totalDx = e.clientX - ctx.startX;
   const totalDy = e.clientY - ctx.startY;
 
-  // 색상 모드 전환
+  // ── 색상 모드 진입: 아래로 충분히 내림 ──
   if (!ctx.colorMode && totalDy > COLOR_DRAG_THRESH) {
     ctx.colorMode = true;
     ctx.colorStartX = e.clientX;
     ctx.colorSteps = 0;
-    ctx.colorBaseResolved = false;
     ctx.previewColorIdx = -1;
+    ctx.colorBaseResolved = false;
 
     clearPreviewHighlight();
     if (orb) orb.classList.add('orb-color-mode');
@@ -478,17 +488,22 @@ function handleToolDragMove(e) {
     return;
   }
 
-  // 색상 모드 중
+  // ── 색상 모드 중 ──
   if (ctx.colorMode) {
+    // 위로 돌아가면 도구 모드 복귀
     if (totalDy < COLOR_DRAG_THRESH - 20) {
       ctx.colorMode = false;
+      ctx.colorBaseResolved = false;
       if (orb) orb.classList.remove('orb-color-mode');
       highlightColorBar(false);
       clearColorHighlight();
       updateLabel(ctx.previewTool || pendingTool || tool);
+      // 도구 하이라이트 복원
+      if (ctx.previewTool) previewToolHighlight(ctx.previewTool);
       return;
     }
 
+    // 좌우로 색상 순환
     const colorDx = e.clientX - ctx.colorStartX;
     const colorSteps = Math.trunc(colorDx / DRAG_THRESH);
 
@@ -499,8 +514,9 @@ function handleToolDragMove(e) {
     return;
   }
 
-  // 도구 순환
+  // ── 기존 도구 순환 ──
   const newSteps = Math.trunc(totalDx / DRAG_THRESH);
+
   if (newSteps !== ctx.steps) {
     ctx.steps = newSteps;
     const order = getToolOrder();
@@ -520,40 +536,29 @@ function finishToolDrag() {
   const wasColorMode = ctx.colorMode;
   const selectedTool = ctx.previewTool;
 
-  // ★ exitState(TOOL_DRAG)가 transition 안에서 호출됨
+  // exitState에서 색상 모드 클래스/하이라이트 정리됨
 
   if (wasColorMode) {
-    // 색상만 바꿈 → 기존 상태 유지
+    // 색상만 바꾸고 현재 도구/활성 상태 유지
     updateLabel(pendingTool || tool);
-    if (_toolActivated) {
-      transition(State.SHOWN);
-    } else {
-      transition(State.SHOWN);
-    }
+    transition(State.SHOWN);
     return;
   }
 
   // 도구 전환
   const isDrawing = selectedTool && !NO_ORB_TOOLS.has(selectedTool);
 
-  if (isDrawing) {
-    // ★ setTool 내부에서 notifyToolChanged가 호출되는데,
-    //    그 안에서 상태를 건드리지 않도록 suppress
-    _suppressNotify = true;
+  if (selectedTool) {
     setTool(selectedTool);
-    _suppressNotify = false;
+  }
 
-    // setTool이 pendingTool을 설정했으므로 activatePending으로 실제 활성화
+  if (isDrawing) {
     activatePending();
     _toolActivated = true;
     if (orb) orb.classList.add('orb-tool-active');
     updateLabel(selectedTool);
     transition(State.SHOWN);
   } else {
-    _suppressNotify = true;
-    setTool(selectedTool);
-    _suppressNotify = false;
-
     _toolActivated = false;
     if (orb) orb.classList.remove('orb-tool-active');
     transition(State.HIDDEN);
@@ -703,6 +708,7 @@ function selectColorByStep(step) {
   const dots = getColorDots();
   if (dots.length === 0) return;
 
+  // 현재 활성 색상의 인덱스를 기준으로 (한 번만 계산)
   if (!ctx.colorBaseResolved) {
     ctx.colorBaseResolved = true;
     const active = dots.findIndex(d => d.classList.contains('active'));
@@ -711,14 +717,17 @@ function selectColorByStep(step) {
 
   const idx = Math.max(0, Math.min(colorBaseIdx + step, dots.length - 1));
 
+  // 하이라이트 표시
   clearColorHighlight();
   dots[idx].classList.add('cdot-orb-highlight');
 
+  // 실제 색상 적용
   if (ctx.previewColorIdx !== idx) {
     ctx.previewColorIdx = idx;
-    dots[idx].click();
+    dots[idx].click();  // 기존 setColor 로직 트리거
     if (navigator.vibrate) navigator.vibrate(8);
 
+    // Orb 라벨에 색상 표시
     if (orb && orbLabel) {
       const color = dots[idx].dataset.c;
       orbLabel.style.color = color;
