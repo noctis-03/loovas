@@ -683,3 +683,65 @@ function applyPosition() {
   const half = ORB_SIZE / 2;
   orb.style.transform = `translate(${orbX - half}px, ${orbY - half}px)`;
 }
+
+// ═══════════════════════════════════════════════════
+//  색상 선택 헬퍼
+// ═══════════════════════════════════════════════════
+
+let colorDots = null;
+let colorBaseIdx = 0;
+
+function getColorDots() {
+  if (!colorDots) {
+    colorDots = [...document.querySelectorAll('#color-bar .cdot')];
+  }
+  return colorDots;
+}
+
+function selectColorByStep(step) {
+  const dots = getColorDots();
+  if (dots.length === 0) return;
+
+  // 현재 활성 색상의 인덱스를 기준으로
+  if (!ctx.colorBaseResolved) {
+    ctx.colorBaseResolved = true;
+    const active = dots.findIndex(d => d.classList.contains('active'));
+    colorBaseIdx = active >= 0 ? active : 0;
+  }
+
+  const idx = Math.max(0, Math.min(colorBaseIdx + step, dots.length - 1));
+
+  // 하이라이트 표시
+  clearColorHighlight();
+  dots[idx].classList.add('cdot-orb-highlight');
+
+  // 실제 색상 적용
+  if (ctx.previewColorIdx !== idx) {
+    ctx.previewColorIdx = idx;
+    dots[idx].click();  // 기존 setColor 로직 트리거
+    if (navigator.vibrate) navigator.vibrate(8);
+
+    // Orb 라벨에 색상 표시
+    if (orb) {
+      const color = dots[idx].dataset.c;
+      orbLabel.style.color = color;
+      orbLabel.textContent = '●';
+    }
+  }
+}
+
+function clearColorHighlight() {
+  const dots = getColorDots();
+  dots.forEach(d => d.classList.remove('cdot-orb-highlight'));
+  if (orbLabel) orbLabel.style.color = '';
+}
+
+function highlightColorBar(show) {
+  const cb = document.getElementById('color-bar');
+  if (!cb) return;
+  if (show) {
+    cb.classList.add('cb-visible', 'cb-orb-highlight');
+  } else {
+    cb.classList.remove('cb-orb-highlight');
+  }
+}
