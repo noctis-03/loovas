@@ -15,7 +15,8 @@ import { addText } from './text.js';
 import { updateMinimap } from './layout.js';
 import { focusEditableTouch } from './edit.js';
 import { pushState } from './history.js';
-import { isOrbLocked, isToolActivated, tryActivateByTap, deactivateByTap, scheduleRevertAfterUse, ensureRevertIfNeeded } from './toolOrb.js';
+import { isOrbLocked, isToolActivated, tryActivateByTap, deactivateByTap, scheduleRevertAfterUse, ensureRevertIfNeeded, resetOrbTimer } from './toolOrb.js';
+
 
 const TAP_MOVE_THRESH = 12;
 const TAP_TIME_THRESH = 250;
@@ -73,12 +74,13 @@ export function initTouchEvents() {
       return;
     }
 
-    // pendingTool 있고 이미 활성화 → 도구 동작 시작
+   // pendingTool 있고 이미 활성화 → 도구 동작 시작
     if (S.pendingTool && isToolActivated()) {
-      if (S.tool === 'pen' || S.tool === 'highlight') { startDraw(s2b(t.clientX, t.clientY)); e.preventDefault(); return; }
-      if (S.tool === 'eraser') { S.setDrawing(true); eraseAt(s2b(t.clientX, t.clientY)); e.preventDefault(); return; }
-      if (S.tool === 'rect' || S.tool === 'circle' || S.tool === 'arrow') { S.setDrawing(true); S.setShapeA(s2b(t.clientX, t.clientY)); e.preventDefault(); return; }
-      if (S.tool === 'text') { addText(s2b(t.clientX, t.clientY)); pushState(); e.preventDefault(); return; }
+      if (S.tool === 'pen' || S.tool === 'highlight') { resetOrbTimer(); startDraw(s2b(t.clientX, t.clientY)); e.preventDefault(); return; }
+      if (S.tool === 'eraser') { resetOrbTimer(); S.setDrawing(true); eraseAt(s2b(t.clientX, t.clientY)); e.preventDefault(); return; }
+      if (S.tool === 'rect' || S.tool === 'circle' || S.tool === 'arrow') { resetOrbTimer(); S.setDrawing(true); S.setShapeA(s2b(t.clientX, t.clientY)); e.preventDefault(); return; }
+      if (S.tool === 'text') { resetOrbTimer(); addText(s2b(t.clientX, t.clientY)); pushState(); e.preventDefault(); return; }
+
       if (S.tool === 'select') {
         if (!e.target.closest('.el')) {
           deselectAll();
