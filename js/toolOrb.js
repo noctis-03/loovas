@@ -22,6 +22,8 @@ const LONGPRESS_MS    = 400;
 const HIDE_DELAY_TOOL = 6000;
 const HIDE_DELAY_USE  = 3000;
 const TAP_TIME_THRESH = 280;
+const COLOR_DRAG_THRESH = 60;  // 도구 드래그 중 아래로 이 거리 이상 → 색상 모드
+
 
 // ── FSM ──
 const State = Object.freeze({
@@ -463,8 +465,48 @@ function handleOrbSingleTap() {
 
 function handleToolDragMove(e) {
   const totalDx = e.clientX - ctx.startX;
+  const totalDy = e.clientY - ctx.startY;
   const newSteps = Math.trunc(totalDx / DRAG_THRESH);
 
+  // ★ 아래로 충분히 내리면 색상 모드 전환
+  if (!ctx.colorMode && totalDy > COLOR_DRAG_THRESH) {
+    ctx.colorMode = true;
+    ctx.colorStartX = e.clientX;
+    ctx.colorSteps = 0;
+    ctx.previewColor = null;
+
+    // 도구 프리뷰 정리, 색상 바 강조 시작
+    clearPreviewHighlight();
+    if (orb) orb.classList.add('orb-color-mode');
+    updateLabel('🎨');
+    highlightColorBar(true);
+    return;
+  }
+
+  // ★ 색상 모드 중
+  if (ctx.colorMode) {
+    // 위로 돌아가면 도구 모드 복귀
+    if (totalDy < COLOR_DRAG_THRESH - 20) {
+      ctx.colorMode = false;
+      if (orb) orb.classList.remove('orb-color-mode');
+      highlightColorBar(false);
+      clearColorHighlight();
+      updateLabel(ctx.previewTool || pendingTool || tool);
+      return;
+    }
+
+    // 좌우로 색상 순환
+    const colorDx = e.clientX - ctx.colorStartX;
+    const colorSteps = Math.trunc(colorDx / DRAG_THRESH);
+
+    if (colorSteps !== ctx.colorSteps) {
+      ctx.colorSteps = colorSteps;
+      selectColorByStep(colorSteps);
+    }
+    return;
+  }
+
+  // ★ 기존 도구 순환
   if (newSteps !== ctx.steps) {
     ctx.steps = newSteps;
     const order = getToolOrder();
