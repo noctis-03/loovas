@@ -224,17 +224,28 @@ function exitState(s) {
     case State.HOLD:
       cancelLongPress();
       break;
-    case State.TOOL_DRAG:
-      _orbLock = false;
-      if (orb) orb.classList.remove('orb-active');
-      if (orb) orb.classList.remove('orb-color-mode');
-      clearPreviewHighlight();
-      clearColorHighlight();
-      highlightColorBar(false);
+     case State.TOOL_DRAG: {
+      cancelHideTimer();
+      _orbLock = true;
+      if (orb) orb.classList.add('orb-active');
+
+      const baseTool = pendingTool || tool;
+      const order = getToolOrder();
+      ctx.baseIdx = order.indexOf(baseTool);
+      if (ctx.baseIdx === -1) ctx.baseIdx = 0;
+      ctx.steps = 0;
+      ctx.previewTool = baseTool;
+      ctx.colorMode = false;          // ★ 추가: 색상 모드 초기화
+      ctx.colorBaseResolved = false;   // ★ 추가: 색상 기준 인덱스 초기화
+
+      updateLabel(baseTool);
       const tb = document.getElementById('toolbar');
-      if (tb) tb.classList.remove('tb-orb-zoom');
+      if (tb) tb.classList.add('tb-orb-zoom');
+      previewToolHighlight(baseTool);
       break;
-  }
+    }
+
+}
 }
 
 function enterState(s) {
@@ -305,15 +316,16 @@ function onOrbPointerDown(e) {
     dirLocked: false,
   });
 
-  longPressTimer = setTimeout(() => {
+    longPressTimer = setTimeout(() => {
     longPressTimer = null;
     if (fsm === State.HOLD && !ctx.dirLocked) {
       transition(State.TOOL_DRAG, {
         startX: ctx.startX,
+        startY: ctx.startY,       // ★ 추가
       });
     }
   }, LONGPRESS_MS);
-}
+
 
 // ═══════════════════════════════════════════════════
 //  전역 포인터
@@ -341,11 +353,13 @@ function onGlobalMove(e) {
         ctx.dirLocked = true;
         cancelLongPress();
 
-        if (Math.abs(dx) > Math.abs(dy)) {
+               if (Math.abs(dx) > Math.abs(dy)) {
           transition(State.TOOL_DRAG, {
             startX: ctx.startX,
+            startY: ctx.startY,   // ★ 추가
           });
         } else {
+
           transition(State.RELOCATING, {
             startX: ctx.startX,
             startY: ctx.startY,
