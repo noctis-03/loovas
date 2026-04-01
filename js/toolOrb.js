@@ -101,7 +101,7 @@ export { _toolActivated as toolActivated };
 export function notifyToolChanged(t) {
   updateLabel(t);
 
-  // select/pan/edit 등 비그리기 도구 → Orb 숨김
+  // 비그리기 도구 → Orb 숨김
   if (NO_ORB_TOOLS.has(t)) {
     _toolActivated = false;
     if (orb) orb.classList.remove('orb-tool-active');
@@ -109,17 +109,15 @@ export function notifyToolChanged(t) {
     return;
   }
 
-  // 그리기 도구로 변경됨
+  // 그리기 도구로 변경 + Orb가 보이는 중 → 유지 + 타이머 리셋
   if (isOrbVisible()) {
-    // ★ Orb가 보이는 중 → 유지 + 타이머 초기화
-    // pendingTool이 갱신되었으므로 활성 상태도 유지
-    _toolActivated = false;  // 새 도구이므로 아직 미활성 (탭 필요)
-    if (orb) orb.classList.remove('orb-tool-active');
+    // ★ _toolActivated를 유지하여 바로 사용 가능
+    if (orb) orb.classList.toggle('orb-tool-active', _toolActivated);
     scheduleHide(HIDE_DELAY_TOOL);
     return;
   }
 
-  // Orb가 숨겨진 상태 → 그대로 숨김 유지 (탭으로 활성화해야 함)
+  // Orb가 숨겨진 상태 → 그대로 (탭으로 활성화 필요)
   _toolActivated = false;
   if (orb) orb.classList.remove('orb-tool-active');
 }
@@ -173,7 +171,7 @@ export function ensureRevertIfNeeded() {
  *   (그리기 시작 시 호출하면 그리는 동안 Orb가 사라지지 않음)
  */
 export function resetOrbTimer() {
-  if (isOrbVisible() && _toolActivated) {
+  if (isOrbVisible()) {
     cancelHideTimer();
   }
 }
@@ -486,23 +484,18 @@ function finishToolDrag() {
   const selectedTool = ctx.previewTool;
   const isDrawing = selectedTool && !NO_ORB_TOOLS.has(selectedTool);
 
-  // exitState에서 orbLock 해제, preview 정리
-
   if (selectedTool) {
     setTool(selectedTool);
-    // setTool → notifyToolChanged가 호출됨
-    // notifyToolChanged에서 isOrbVisible() 체크 시
-    // 아직 TOOL_DRAG 상태이므로 true → Orb 유지 + 타이머 리셋
   }
 
-  // ★ 그리기 도구로 전환 → Orb 유지, 미활성 상태 (탭으로 활성화)
   if (isDrawing) {
-    _toolActivated = false;
-    if (orb) orb.classList.remove('orb-tool-active');
+    // ★ 도구 전환 후 바로 사용 가능하도록 활성화 유지
+    activatePending();
+    _toolActivated = true;
+    if (orb) orb.classList.add('orb-tool-active');
     updateLabel(selectedTool);
     transition(State.SHOWN);
   } else {
-    // 비그리기 도구 → Orb 숨김
     _toolActivated = false;
     if (orb) orb.classList.remove('orb-tool-active');
     transition(State.HIDDEN);
