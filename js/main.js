@@ -1,10 +1,5 @@
 // ═══════════════════════════════════════════════════
-//  main.js — 애플리케이션 진입점
-//
-//  FIX: initDomRefs() 호출 추가
-//  FIX: mode-bar 이벤트 바인딩 추가
-//  FIX: toolBridge 등록
-//  FIX: 자동저장 복원 기능 추가
+//  main.js — 애플리케이션 진입점 (새 사이드바 레이아웃)
 // ═══════════════════════════════════════════════════
 
 import { initDomRefs } from './state.js';
@@ -30,10 +25,8 @@ import { registerToolFunctions, registerNotifyToolChanged } from './toolBridge.j
 persistence._svg = { mkSvg, setAttrs };
 
 function init() {
-  // ★ FIX: DOM 참조 초기화를 가장 먼저 수행
   initDomRefs();
 
-  // ★ FIX: toolBridge 콜백 등록 (순환 참조 해결)
   registerToolFunctions(setTool, activatePending, revertToPan);
   registerNotifyToolChanged(notifyToolChanged);
 
@@ -46,19 +39,28 @@ function init() {
   initImageInput();
   initPersistence();
   initToolbar();
-  // 위성 요소 초기 위치 (DOM 렌더 후)
+
   requestAnimationFrame(() => updateSatellitePositions());
   initToolOrb();
 
   // 줌 리셋
   document.getElementById('zoom-pill').addEventListener('click', resetView);
 
-  // ★ FIX: mode-bar + toolbar 모두에서 도구 버튼 이벤트 등록
+  // ── 사이드바 툴 버튼 이벤트 ──
+  // data-tool 버튼 (left-sidebar)
+  document.querySelectorAll('#left-sidebar [data-tool]').forEach(btn => {
+    btn.addEventListener('click', () => setTool(btn.dataset.tool));
+  });
+
+  // 레거시 (hidden) toolbar/mode-bar도 유지
   document.querySelectorAll('#toolbar [data-tool], #mode-bar [data-tool]').forEach(btn => {
     btn.addEventListener('click', () => setTool(btn.dataset.tool));
   });
 
-  // 도구 또는 패널 토글 버튼
+  // data-tool-or-panel 버튼 (펜/형광펜/지우개)
+  document.querySelectorAll('#left-sidebar [data-tool-or-panel]').forEach(btn => {
+    btn.addEventListener('click', () => setToolOrPanel(btn.dataset.toolOrPanel));
+  });
   document.querySelectorAll('#toolbar [data-tool-or-panel]').forEach(btn => {
     btn.addEventListener('click', () => setToolOrPanel(btn.dataset.toolOrPanel));
   });
@@ -80,19 +82,19 @@ function init() {
     if (fn) btn.addEventListener('click', fn);
   });
 
-  // 색상 선택
+  // 색상 선택 (새 color-tray)
   document.querySelectorAll('#color-tray .cdot').forEach(el => {
     el.addEventListener('click', () => setColor(el));
   });
 
-  // 선 굵기 선택
-  document.querySelectorAll('#color-tray .sbtn').forEach(el => {
+  // 선 굵기 선택 (새 sw-btn)
+  document.querySelectorAll('#color-tray .sw-btn').forEach(el => {
     el.addEventListener('click', () => setStroke(el, parseInt(el.dataset.sw)));
   });
 
   autoSave();
 
-  // ★ FIX: 자동저장 데이터가 있으면 복원 시도, 없으면 시작 윈도우 표시
+  // 자동저장 복원
   let hasAutosave = false;
   try {
     const saved = localStorage.getItem('canvas-autosave');
@@ -109,10 +111,9 @@ function init() {
     createStartupWindow();
   }
 
-  // ── 히스토리 초기화 (초기 상태 기록) ──
   setTimeout(() => initHistory(), 100);
 
-  console.log('∞ Canvas 0.01 — Modular loaded');
+  console.log('∞ Canvas — New Sidebar Layout loaded');
 }
 
 if (document.readyState === 'loading') {
