@@ -15,8 +15,8 @@ const SPAWN_OFFSET_Y     = -50;
 const DRAG_THRESH        = 28;
 const DIR_LOCK_DIST      = 14;
 const LONGPRESS_MS       = 400;
-const HIDE_DELAY_TOOL    = 6000;
-const HIDE_DELAY_USE     = 3000;
+const HIDE_DELAY_TOOL    = Infinity;
+const HIDE_DELAY_USE     = Infinity;
 const TAP_TIME_THRESH    = 280;
 const COLOR_DRAG_THRESH  = 60;
 
