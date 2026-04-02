@@ -1,7 +1,8 @@
 // ═══════════════════════════════════════════════════
 //  persistence.js — 저장, 불러오기, 자동 저장
 //
-//  FIX: restoreBoard에서 DOM 요소 복원 후 핸들/이벤트 재바인딩
+//  ★ MODIFIED: 저장 UI 다이얼로그 추가
+//  ★ MODIFIED: 오버레이 레이어 스트로크 복원 지원
 // ═══════════════════════════════════════════════════
 
 import * as S from './state.js';
@@ -12,10 +13,13 @@ import { clearHistory } from './history.js';
 import { addHandles, attachSelectClick } from './elements.js';
 import { applyT } from './transform.js';
 
+// ★ NEW: 마지막 저장 파일명 기억
+let lastSavedFilename = null;
+
 function buildSaveData() {
   const data = {
     version: '0.01',
-    strokes: S.getStrokes().map(s => ({ kind: s.kind, attrs: { ...s.attrs } })),
+    strokes: S.getStrokes().map(s => ({ kind: s.kind, attrs: { ...s.attrs }, overlay: !!s.overlay })), // ★ overlay 플래그 저장
     elements: [],
     T: { ...S.T }
   };
@@ -34,9 +38,33 @@ function buildSaveData() {
   return data;
 }
 
+// ★ MODIFIED: 저장 UI 다이얼로그 표시
 export function saveBoard() {
+  showSaveDialog();
+}
+
+function showSaveDialog() {
+  const overlay = document.getElementById('save-overlay');
+  const filenameInput = document.getElementById('save-filename');
+
+  const defaultName = `canvas-${new Date().toISOString().slice(0, 10)}`;
+  filenameInput.value = lastSavedFilename ? lastSavedFilename.replace(/\.json$/, '') : defaultName;
+
+  overlay.style.display = 'flex';
+  requestAnimationFrame(() => overlay.classList.add('open'));
+  filenameInput.focus();
+  filenameInput.select();
+}
+
+function closeSaveDialog() {
+  const overlay = document.getElementById('save-overlay');
+  overlay.classList.remove('open');
+  setTimeout(() => { overlay.style.display = 'none'; }, 260);
+}
+
+function doSave(filename) {
   const data = buildSaveData();
-  const filename = `canvas-${new Date().toISOString().slice(0, 10)}.json`;
+  if (!filename.endsWith('.json')) filename += '.json';
 
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -44,11 +72,13 @@ export function saveBoard() {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(a.href);
-  snack('저장 완료');
 
+  lastSavedFilename = filename;
+  snack('저장 완료');
   addRecentFile(filename, data);
 
-  try { localStorage.setItem('canvas-autosave', JSON.stringify(data)); } catch (e) { /* ignore */ }
+  try { localStorage.setItem('canvas-autosave', JSON.stringify(data)); } catch (e) {}
+  closeSaveDialog();
 }
 
 export function loadBoard(e) {
@@ -71,8 +101,9 @@ export function loadBoard(e) {
 }
 
 export function restoreBoard(data) {
-  // SVG 초기화
+  // SVG 초기화 (두 레이어 모두)
   while (S.svgl.firstChild) S.svgl.removeChild(S.svgl.firstChild);
+  if (S.svgOverlay) { while (S.svgOverlay.firstChild) S.svgOverlay.removeChild(S.svgOverlay.firstChild); } // ★ NEW
   S.setStrokes([]);
 
   // 요소 초기화
@@ -115,8 +146,11 @@ export function restoreBoard(data) {
       if (s.kind !== 'arrow') {
         setAttrs(el, s.attrs);
       }
-      S.svgl.appendChild(el);
-      S.pushStroke({ kind: s.kind, attrs: s.attrs, svgEl: el });
+
+      // ★ NEW: overlay 플래그에 따라 적절한 레이어에 추가
+      const targetLayer = (s.overlay && S.svgOverlay) ? S.svgOverlay : S.svgl;
+      targetLayer.appendChild(el);
+      S.pushStroke({ kind: s.kind, attrs: s.attrs, svgEl: el, overlay: !!s.overlay });
     });
   }
 
@@ -128,7 +162,6 @@ export function restoreBoard(data) {
       const el = wrapper.firstElementChild;
       if (!el) return;
 
-      // 기존 핸들 제거
       const oldHandles = el.querySelector('.el-handles');
       if (oldHandles) oldHandles.remove();
 
@@ -143,7 +176,6 @@ export function restoreBoard(data) {
       addHandles(el);
       attachSelectClick(el);
 
-      // 포스트잇/카드 내부 이벤트 재바인딩
       _rebindInternalEvents(el);
     });
   }
@@ -154,9 +186,7 @@ export function restoreBoard(data) {
   updateMinimap();
 }
 
-// ★ FIX: 내부 이벤트 재바인딩 (포스트잇, 카드)
 function _rebindInternalEvents(el) {
-  // 포스트잇
   const stickyBody = el.querySelector('.sticky-body');
   if (stickyBody) {
     const STICKY_COLORS = ['#fef3c7', '#fce7f3', '#d1fae5', '#dbeafe', '#ede9fe', '#fee2e2', '#fef9c3'];
@@ -191,7 +221,6 @@ function _rebindInternalEvents(el) {
     }
   }
 
-  // 카드
   const cardBody = el.querySelector('.card-body');
   if (cardBody) {
     const closeBtn = cardBody.querySelector('.card-close-btn');
@@ -278,7 +307,7 @@ function _rebindSubBlock(block, container) {
   });
 }
 
-// SVG 모듈 주입 인터페이스 (순환 참조 방지)
+// SVG 모듈 주입 인터페이스
 let _svgModule = null;
 function _getSvgModule() {
   if (_svgModule) return _svgModule;
@@ -289,9 +318,10 @@ export const persistence = { _svg: null };
 export function clearAll() {
   if (!confirm('모든 내용을 지우시겠습니까?')) return;
   while (S.svgl.firstChild) S.svgl.removeChild(S.svgl.firstChild);
+  if (S.svgOverlay) { while (S.svgOverlay.firstChild) S.svgOverlay.removeChild(S.svgOverlay.firstChild); } // ★ NEW
   S.setStrokes([]);
   S.board.querySelectorAll('.el').forEach(el => el.remove());
-  try { localStorage.removeItem('canvas-autosave'); } catch (e) { /* ignore */ }
+  try { localStorage.removeItem('canvas-autosave'); } catch (e) {}
   updateMinimap();
   snack('전체 삭제 완료');
   clearHistory();
@@ -302,10 +332,43 @@ export function autoSave() {
     try {
       const data = buildSaveData();
       localStorage.setItem('canvas-autosave', JSON.stringify(data));
-    } catch (e) { /* ignore */ }
+    } catch (e) {}
   }, 30000);
 }
 
+// ★ MODIFIED: 저장 다이얼로그 이벤트 바인딩 추가
 export function initPersistence() {
   document.getElementById('load-in').addEventListener('change', loadBoard);
+
+  // 저장 다이얼로그 버튼들
+  document.getElementById('save-cancel-btn').addEventListener('click', closeSaveDialog);
+
+  document.getElementById('save-quick-btn').addEventListener('click', () => {
+    const name = lastSavedFilename || `canvas-${new Date().toISOString().slice(0, 10)}.json`;
+    doSave(name);
+  });
+
+  document.getElementById('save-as-btn').addEventListener('click', () => {
+    const name = document.getElementById('save-filename').value.trim();
+    if (!name) return;
+    doSave(name);
+  });
+
+  // Overlay 바깥 클릭 시 닫기
+  document.getElementById('save-overlay').addEventListener('click', (e) => {
+    if (e.target.id === 'save-overlay') closeSaveDialog();
+  });
+
+  // Enter 키로 저장
+  document.getElementById('save-filename').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const name = e.target.value.trim();
+      if (name) doSave(name);
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeSaveDialog();
+    }
+  });
 }
