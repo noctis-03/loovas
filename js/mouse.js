@@ -2,6 +2,7 @@
 //  mouse.js — 마우스 이벤트 핸들링
 //
 //  ★ MODIFIED: startDraw에 화면 좌표 전달 (오버레이 레이어 판단용)
+//  ★ MODIFIED: updateTouchPosition 연결 (Orb 팬 포인터 회피)
 // ═══════════════════════════════════════════════════
 
 import * as S from './state.js';
@@ -13,7 +14,10 @@ import { addText } from './text.js';
 import { updateMinimap } from './layout.js';
 import { focusEditable } from './edit.js';
 import { pushState } from './history.js';
-import { isOrbLocked } from './toolOrb.js';
+import {
+  isOrbLocked,
+  updateTouchPosition   // ★ 추가
+} from './toolOrb.js';
 
 let justFinishedLasso = false;
 
@@ -44,7 +48,12 @@ export function initMouseEvents() {
 
     const bp = s2b(e.clientX, e.clientY);
 
-    if (S.tool === 'pen' || S.tool === 'highlight') { startDraw(bp, e.clientX, e.clientY); return; } // ★ MODIFIED
+    if (S.tool === 'pen' || S.tool === 'highlight') {
+      // ★ 그리기 시작 시 첫 좌표 전달
+      updateTouchPosition(e.clientX, e.clientY);
+      startDraw(bp, e.clientX, e.clientY);
+      return;
+    }
     if (S.tool === 'eraser') { S.setDrawing(true); eraseAt(bp); return; }
     if (S.tool === 'rect' || S.tool === 'circle' || S.tool === 'arrow') { S.setDrawing(true); S.setShapeA(bp); return; }
     if (S.tool === 'text') { addText(bp); pushState(); return; }
@@ -98,6 +107,10 @@ export function initMouseEvents() {
       showSelRect(S.lasso); highlightLasso(S.lasso); return;
     }
     if (!S.drawing) return;
+
+    // ★ 그리기 중 매 이동마다 Orb에 좌표 전달
+    updateTouchPosition(e.clientX, e.clientY);
+
     const bp = s2b(e.clientX, e.clientY);
     if (S.tool === 'pen' || S.tool === 'highlight') continueDraw(bp);
     if (S.tool === 'eraser') eraseAt(bp);
