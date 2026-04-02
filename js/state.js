@@ -1,13 +1,14 @@
 // ═══════════════════════════════════════════════════
 //  state.js — 전역 상태 & DOM 참조
 //
-//  FIX: DOM 참조를 즉시 실행하지 않고 initDomRefs()로 지연 초기화
+//  ★ MODIFIED: svgOverlay 추가
 // ═══════════════════════════════════════════════════
 
 // DOM references — 지연 초기화
 export let vp      = null;
 export let board   = null;
 export let svgl    = null;
+export let svgOverlay = null; // ★ NEW: 오버레이 SVG 레이어
 export let pCvs    = null;
 export let pCtx    = null;
 export let mmCvs   = null;
@@ -19,6 +20,7 @@ export function initDomRefs() {
   vp      = document.getElementById('viewport');
   board   = document.getElementById('board');
   svgl    = document.getElementById('svg-layer');
+  svgOverlay = document.getElementById('svg-overlay'); // ★ NEW
   pCvs    = document.getElementById('preview-canvas');
   pCtx    = pCvs.getContext('2d');
   mmCvs   = document.getElementById('minimap');
@@ -66,6 +68,10 @@ export let strokes       = [];
 export let zTop          = 10;
 export let gridOn        = true;
 export let longPressTimer = null;
+
+// ★ NEW: 현재 그리기가 오버레이 레이어에서 진행 중인지 플래그
+export let drawingOnOverlay = false;
+export function setDrawingOnOverlay(v) { drawingOnOverlay = v; }
 
 // Setters for mutable state
 export function setPanning(v)        { panning = v; }
