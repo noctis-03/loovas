@@ -2,12 +2,13 @@
 //  layout.js — 레이아웃 동기화 & 미니맵
 //
 //  FIX: getStrokes() getter 사용으로 바인딩 이슈 해결
+//  FIX: transform.js 순환 참조 해결 — registerUpdateMinimap 사용
 // ═══════════════════════════════════════════════════
 
 import { vp, pCvs, board, svgl, T } from './state.js';
 import * as S from './state.js';
 import { isMobile } from './utils.js';
-import { updateGrid } from './transform.js';
+import { updateGrid, registerUpdateMinimap } from './transform.js';
 
 export function syncLayout() {
   const tb = document.getElementById('toolbar');
@@ -34,6 +35,7 @@ export function syncLayout() {
 export function updateMinimap() {
   const mm = document.getElementById('minimap');
   if (!mm || isMobile()) return;
+  if (!board) return; // ★ FIX: DOM 미초기화 방어
   const ctx = mm.getContext('2d');
   const W = mm.width, H = mm.height;
   ctx.clearRect(0, 0, W, H);
@@ -77,6 +79,7 @@ export function updateMinimap() {
     });
   }
 
+  if (!vp) return; // ★ FIX: DOM 미초기화 방어
   const vpR = vp.getBoundingClientRect();
   const vpTL = { x: (0 - T.x) / T.s, y: (0 - T.y) / T.s };
   const vpBR = { x: (vpR.width - T.x) / T.s, y: (vpR.height - T.y) / T.s };
@@ -132,6 +135,9 @@ export function updateMinimap() {
 }
 
 export function initLayout() {
+  // ★ FIX: transform.js에 updateMinimap 콜백 등록 (순환 참조 해결)
+  registerUpdateMinimap(updateMinimap);
+
   window.addEventListener('resize', () => syncLayout());
   window.addEventListener('orientationchange', () => setTimeout(syncLayout, 250));
   syncLayout();
