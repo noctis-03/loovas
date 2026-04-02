@@ -33,6 +33,12 @@ body{
 #svg-layer{position:absolute;top:0;left:0;width:1px;height:1px;overflow:visible;pointer-events:none;}
 #preview-canvas{position:fixed;pointer-events:none;z-index:500;}
 
+/* ★ NEW: SVG 오버레이 레이어 (포스트잇/카드 위에 그려짐) */
+#svg-overlay{
+  position:absolute;top:0;left:0;width:1px;height:1px;
+  overflow:visible;pointer-events:none;z-index:99999;
+}
+
 /* ── Selection rectangle ── */
 #sel-rect{
   position:fixed;border:1.5px solid var(--accent2);
@@ -103,7 +109,7 @@ body{
 }
 
 /* ══════════════════════════════════════════════════════
-   CARD WINDOW (unchanged)
+   CARD WINDOW
 ══════════════════════════════════════════════════════ */
 .card-body{display:flex;flex-direction:column;background:color-mix(in srgb, var(--panel) 95%, white 5%);border:1.5px solid color-mix(in srgb, var(--border) 80%, white 20%);border-radius:14px;box-shadow:0 10px 28px rgba(26,23,20,0.16);overflow:hidden;min-width:180px;min-height:120px;}
 .card-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(0,0,0,0.08);background:rgba(255,255,255,0.45);flex-shrink:0;}
@@ -147,7 +153,7 @@ body{
 .card-sub-block.card-sub-resizing .card-sub-resize-handle::after{content:'';position:absolute;bottom:-2px;right:-2px;width:6px;height:6px;background:var(--accent2);border-radius:50%;}
 
 /* ══════════════════════════════════════════════════════
-   STARTUP / SYSTEM WINDOWS (unchanged)
+   STARTUP / SYSTEM WINDOWS
 ══════════════════════════════════════════════════════ */
 .start-window{position:absolute;}
 .start-window-body{width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;border-radius:18px;background:color-mix(in srgb, var(--panel) 92%, white 8%);border:1.5px solid color-mix(in srgb, var(--border) 85%, white 15%);box-shadow:0 14px 32px rgba(26,23,20,0.18);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
@@ -179,8 +185,7 @@ body{
 .image-body{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;border-radius:1px;}
 
 /* ══════════════════════════════════════════════════════
-   TOOLBAR — 항상 가로, 드래그 이동, 모서리 자석 스냅
-   화면 폭에 맞게 축소, 내부 스크롤
+   TOOLBAR
 ══════════════════════════════════════════════════════ */
 #toolbar{
   position:fixed;
@@ -196,9 +201,8 @@ body{
   gap:4px;
   padding:6px 8px;
   transition:box-shadow .15s;
-  /* ── 핵심: 화면에 맞게 축소 ── */
-  max-width:calc(100vw - 24px);  /* 양쪽 12px 갭 */
-  width:max-content;             /* 콘텐츠 자연 너비가 기본 */
+  max-width:calc(100vw - 24px);
+  width:max-content;
 }
 #toolbar.tb-dragging{
   box-shadow:0 14px 40px rgba(26,23,20,0.22);
@@ -207,7 +211,6 @@ body{
 #toolbar.tb-snapping{
   transition:left .2s cubic-bezier(.22,.68,.36,1), top .2s cubic-bezier(.22,.68,.36,1), box-shadow .15s;
 }
-
 
 #tb-drag-handle{
   display:flex;align-items:center;justify-content:center;
@@ -257,18 +260,16 @@ body{
     background:var(--ink);color:var(--panel);font-size:10px;
     padding:3px 7px;border-radius:5px;white-space:nowrap;pointer-events:none;z-index:9999;
   }
-  /* 툴팁은 항상 아래로 */
   .tbtn[data-tip]:hover::after{
     top:calc(100% + 6px);left:50%;transform:translateX(-50%);
   }
-  /* 툴바가 화면 하단에 있을 때 → 위로 (JS가 data-tip-dir="up" 추가) */
   #toolbar[data-tip-dir="up"] .tbtn[data-tip]:hover::after{
     top:auto;bottom:calc(100% + 6px);
   }
 }
 
 /* ══════════════════════════════════════════════════════
-   MODE BAR — select / edit / pan (toolbar 왼쪽 위성)
+   MODE BAR
 ══════════════════════════════════════════════════════ */
 #mode-bar{
   position:fixed;
@@ -290,7 +291,7 @@ body{
 }
 
 /* ══════════════════════════════════════════════════════
-   UR CLUSTER — undo / redo (toolbar 오른쪽 위성)
+   UR CLUSTER
 ══════════════════════════════════════════════════════ */
 #ur-cluster{
   position:fixed;
@@ -333,7 +334,7 @@ body{
 }
 
 /* ══════════════════════════════════════════════════════
-   COLOR TRAY — toolbar 내부 인라인 확장
+   COLOR TRAY
 ══════════════════════════════════════════════════════ */
 #color-tray{
   display:none;
@@ -391,6 +392,15 @@ body{
   box-shadow:0 0 0 2px rgba(200,75,47,0.5),
              0 4px 16px rgba(200,75,47,0.2);
   border-radius:8px;
+}
+
+/* ★ NEW: sbtn-orb-highlight (굵기 선택 Orb 하이라이트) */
+.sbtn.sbtn-orb-highlight{
+  transform:scale(1.4);
+  box-shadow:0 0 0 3px rgba(255,255,255,0.9),
+             0 0 12px rgba(200,75,47,0.4);
+  transition:transform 0.12s ease,box-shadow 0.12s ease;
+  border-color:var(--accent) !important;
 }
 
 
@@ -452,7 +462,7 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
 /* ── Pen Panel ── */
 #pen-panel{position:fixed;z-index:2000;background:color-mix(in srgb,var(--panel) 94%,white 6%);border:1.5px solid color-mix(in srgb,var(--border) 80%,white 20%);border-radius:16px;box-shadow:0 16px 48px rgba(26,23,20,0.20);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:14px 14px 16px;width:228px;display:none;flex-direction:column;gap:13px;font-size:11px;color:var(--ink);letter-spacing:.03em;opacity:0;transform:scale(.97);transition:opacity .15s,transform .15s;pointer-events:none;}
 #pen-panel.pp-open{display:flex;opacity:1;transform:none;pointer-events:all;}
-#pen-panel::before{display:none;} /* 화살표 제거 — 위치가 동적이므로 */
+#pen-panel::before{display:none;}
 .pp-title{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--border);font-weight:500;font-size:11.5px;letter-spacing:.04em;}
 .pp-x{width:28px;height:28px;border:none;background:transparent;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:color-mix(in srgb,var(--ink) 50%,transparent);touch-action:manipulation;}
 .pp-x:hover{background:rgba(0,0,0,0.08);}
@@ -475,6 +485,7 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
 #pp-preview-wrap{width:100%;height:42px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;}
 #pp-preview-svg{width:100%;height:100%;}
 #t-pen.active::after,#t-highlight.active::after,#t-eraser.active::after{content:'';position:absolute;bottom:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.8;pointer-events:none;}
+
 /* ══════════════════════════════════════════════════════
    Undo / Redo 버튼 스타일
 ══════════════════════════════════════════════════════ */
@@ -488,8 +499,6 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
 .undo-redo-btn:active {
   transform: scale(0.88);
 }
-
-/* 호버 시 살짝 강조 */
 @media (hover: hover) {
   .undo-redo-btn:hover {
     background: rgba(0, 0, 0, 0.09);
@@ -497,7 +506,7 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
 }
 
 
-/* ═══ Tool Orb v3 — 고정 위치, 따라다니지 않음 ═══ */
+/* ═══ Tool Orb v3 ═══ */
 
 #tool-orb {
   position: fixed;
@@ -548,6 +557,12 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
               0 4px 24px rgba(200, 75, 47, 0.4);
 }
 
+/* ★ NEW: Orb 굵기 모드 */
+#tool-orb.orb-stroke-mode {
+  background: rgba(43, 108, 176, 0.92);
+  box-shadow: 0 4px 24px rgba(43, 108, 176, 0.4);
+}
+
 #tool-orb-label {
   font-size: 19px;
   line-height: 1;
@@ -587,7 +602,7 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
 
 
 /* ══════════════════════════════════════════════════════
-   Toolbar — Orb 드래그 모드 진입 시 확대 + 둥실 애니메이션
+   Toolbar — Orb 드래그 모드
 ══════════════════════════════════════════════════════ */
 #toolbar {
   transition: box-shadow .25s ease,
@@ -618,95 +633,176 @@ body[data-tool="edit"] #viewport .el .h-resize{pointer-events:none;}
               border-color .25s ease;
 }
 
-#toolbar:not(.tb-orb-zoom) {
-  animation: none;
+
+/* ★ NEW: 편집 모드 화면 테두리 강조 */
+#edit-mode-border {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 998;
+  border: 3px solid transparent;
+  border-radius: 0;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#edit-mode-border.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 20px rgba(200, 75, 47, 0.15);
+  animation: border-pulse 2s ease-in-out infinite;
+}
+
+@keyframes border-pulse {
+  0%   { border-color: rgba(200, 75, 47, 0.7); }
+  50%  { border-color: rgba(200, 75, 47, 0.3); }
+  100% { border-color: rgba(200, 75, 47, 0.7); }
+}
+
+#edit-mode-badge {
+  position: fixed;
+  top: calc(50px + var(--safe-t));
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  background: var(--accent);
+  color: white;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 999px;
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#edit-mode-badge.active {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 
-/* ══════════════════════════════════════════════════════
-   선택 예정(미리보기) 표시 — 고스트 오버레이 방식
-══════════════════════════════════════════════════════ */
-
-/* tb-tools는 항상 정상 스크롤 유지 — overflow 해킹 없음 */
-
-/* 고스트 오버레이: body에 fixed로 붙어 어떤 부모도 클리핑 안 함 */
-#orb-preview-ghost {
-  display: none;
+/* ★ NEW: 저장 다이얼로그 */
+#save-overlay {
   position: fixed;
-  transform: translate(-50%, -50%) scale(1.22);
-  transform-origin: center center;
-  z-index: 2000;
-  pointer-events: none;
+  inset: 0;
+  z-index: 10000;
+  display: none;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(26, 23, 20, 0.25);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+#save-overlay.open {
+  display: flex;
+  opacity: 1;
+}
+
+#save-dialog {
+  background: var(--panel);
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(26, 23, 20, 0.25);
+  padding: 20px 24px 18px;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transform: scale(0.95);
+  transition: transform 0.25s cubic-bezier(.22, .68, .36, 1);
+}
+
+#save-overlay.open #save-dialog {
+  transform: scale(1);
+}
+
+.save-dialog-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.save-dialog-desc {
+  font-family: 'Fraunces', serif;
+  font-size: 13px;
+  color: #756d64;
+  line-height: 1.5;
+}
+
+.save-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.save-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  color: rgba(26, 23, 20, 0.5);
+}
+
+.save-input {
+  border: 1.5px solid var(--border);
   border-radius: 10px;
+  padding: 9px 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.save-input:focus {
+  border-color: var(--accent2);
+}
+
+.save-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.save-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.save-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+  touch-action: manipulation;
+}
+
+.save-btn:active { transform: scale(0.95); }
+
+.save-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+
+.save-btn-primary {
+  background: var(--accent2);
+  color: white;
+}
+
+.save-btn-accent {
   background: var(--ink);
   color: var(--panel);
-  outline: 2.5px solid var(--accent2);
-  outline-offset: 2px;
-  box-shadow: 0 4px 18px rgba(26, 23, 20, 0.28);
-  transition: transform .15s cubic-bezier(.34, 1.56, .64, 1);
 }
-
-#orb-preview-ghost.orb-preview-ghost-active {
-  display: flex;
-}
-
-/* 하단 도트 인디케이터 */
-#orb-preview-ghost.orb-preview-ghost-active::before {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent2);
-  box-shadow: 0 0 6px rgba(43, 108, 176, 0.5);
-  animation: orb-dot-pulse .8s ease-in-out infinite alternate;
-}
-
-@keyframes orb-dot-pulse {
-  0%   { opacity: .6; transform: translateX(-50%) scale(0.8); }
-  100% { opacity: 1;  transform: translateX(-50%) scale(1.15); }
-}
-
-/* 나머지 버튼은 드래그 모드 중 살짝 흐려지게 */
-#toolbar.tb-orb-zoom .tbtn:not(.orb-preview):not(.active) {
-  opacity: 0.45;
-  transition: opacity .15s;
-}
-
-#toolbar.tb-orb-zoom .tbtn.active:not(.orb-preview) {
-  opacity: 0.55;
-  background: color-mix(in srgb, var(--ink) 60%, transparent);
-}
-
-/* ══════════════════════════════════════════════════════
-   Tool Orb — 도구 활성화 상태 (탭으로 활성화됐을 때)
-══════════════════════════════════════════════════════ */
-#tool-orb.orb-tool-active {
-  opacity: 1 !important;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(200, 75, 47, 0.2),
-              0 4px 14px rgba(26, 23, 20, 0.18);
-  animation: orb-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes orb-pulse {
-  0%   { box-shadow: 0 0 0 4px rgba(200, 75, 47, 0.2), 0 4px 14px rgba(26,23,20,0.18); }
-  50%  { box-shadow: 0 0 0 8px rgba(200, 75, 47, 0.1), 0 4px 14px rgba(26,23,20,0.18); }
-  100% { box-shadow: 0 0 0 4px rgba(200, 75, 47, 0.2), 0 4px 14px rgba(26,23,20,0.18); }
-}
-
-/* ═══ Orb 색상 모드 ═══ */
-
-#tool-orb.orb-color-mode {
-  background: rgba(45, 45, 45, 0.92);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3),
-              0 4px 20px rgba(0, 0, 0, 0.35);
-}
-
-
