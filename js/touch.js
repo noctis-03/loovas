@@ -2,6 +2,7 @@
 //  touch.js — 터치 이벤트 (1-finger, 핀치줌)
 //
 //  ★ MODIFIED: startDraw에 화면 좌표 전달 (오버레이 레이어 판단용)
+//  ★ MODIFIED: updateTouchPosition 연결 (Orb 팬 포인터 회피)
 // ═══════════════════════════════════════════════════
 
 import * as S from './state.js';
@@ -13,7 +14,11 @@ import { addText } from './text.js';
 import { updateMinimap } from './layout.js';
 import { focusEditableTouch } from './edit.js';
 import { pushState } from './history.js';
-import { isOrbLocked, isToolActivated, tryActivateByTap, deactivateByTap, scheduleRevertAfterUse, ensureRevertIfNeeded, resetOrbTimer } from './toolOrb.js';
+import {
+  isOrbLocked, isToolActivated, tryActivateByTap, deactivateByTap,
+  scheduleRevertAfterUse, ensureRevertIfNeeded, resetOrbTimer,
+  updateTouchPosition   // ★ 추가
+} from './toolOrb.js';
 
 
 const TAP_MOVE_THRESH = 12;
@@ -28,10 +33,10 @@ let activatedThisTouch = false;
 function cancelSingleFingerActions() {
   if (S.drawing) {
     S.setDrawing(false);
-    if (S.livePth && S.livePth.parentNode) S.livePth.parentNode.removeChild(S.livePth); // ★ MODIFIED
+    if (S.livePth && S.livePth.parentNode) S.livePth.parentNode.removeChild(S.livePth);
     S.setLivePth(null); S.setDrawPts([]); S.setShapeA(null);
     S.pCtx.clearRect(0, 0, S.pCvs.width, S.pCvs.height);
-    S.setDrawingOnOverlay(false); // ★ NEW
+    S.setDrawingOnOverlay(false);
   }
   if (S.touchLasso) { S.setTouchLasso(null); hideSelRect(); clearLassoHover(); }
   if (S.touchPanOrigin) { S.setTouchPanOrigin(null); document.body.classList.remove('panning'); }
@@ -73,7 +78,10 @@ export function initTouchEvents() {
     }
 
     if (S.pendingTool && isToolActivated()) {
-      if (S.tool === 'pen' || S.tool === 'highlight') { resetOrbTimer(); startDraw(s2b(t.clientX, t.clientY), t.clientX, t.clientY); e.preventDefault(); return; } // ★ MODIFIED
+      // ★ 그리기 시작 시 첫 좌표 전달
+      updateTouchPosition(t.clientX, t.clientY);
+
+      if (S.tool === 'pen' || S.tool === 'highlight') { resetOrbTimer(); startDraw(s2b(t.clientX, t.clientY), t.clientX, t.clientY); e.preventDefault(); return; }
       if (S.tool === 'eraser') { resetOrbTimer(); S.setDrawing(true); eraseAt(s2b(t.clientX, t.clientY)); e.preventDefault(); return; }
       if (S.tool === 'rect' || S.tool === 'circle' || S.tool === 'arrow') { resetOrbTimer(); S.setDrawing(true); S.setShapeA(s2b(t.clientX, t.clientY)); e.preventDefault(); return; }
       if (S.tool === 'text') { resetOrbTimer(); addText(s2b(t.clientX, t.clientY)); pushState(); e.preventDefault(); return; }
@@ -117,7 +125,7 @@ export function initTouchEvents() {
     }
 
     const bp = s2b(t.clientX, t.clientY);
-    if (S.tool === 'pen' || S.tool === 'highlight') { startDraw(bp, t.clientX, t.clientY); e.preventDefault(); return; } // ★ MODIFIED
+    if (S.tool === 'pen' || S.tool === 'highlight') { startDraw(bp, t.clientX, t.clientY); e.preventDefault(); return; }
     if (S.tool === 'eraser') { S.setDrawing(true); eraseAt(bp); e.preventDefault(); return; }
     if (S.tool === 'rect' || S.tool === 'circle' || S.tool === 'arrow') { S.setDrawing(true); S.setShapeA(bp); e.preventDefault(); return; }
     if (S.tool === 'text') { addText(bp); pushState(); e.preventDefault(); return; }
@@ -189,6 +197,12 @@ export function initTouchEvents() {
     }
     if (!S.drawing) return;
     e.preventDefault();
+
+    // ★ 그리기 중 매 이동마다 Orb에 좌표 전달
+    if (isToolActivated()) {
+      updateTouchPosition(t.clientX, t.clientY);
+    }
+
     const bp = s2b(t.clientX, t.clientY);
     if (S.tool === 'pen' || S.tool === 'highlight') continueDraw(bp);
     if (S.tool === 'eraser') eraseAt(bp);
