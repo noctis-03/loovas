@@ -71,12 +71,12 @@ if (fn) btn.addEventListener(‘click’, fn);
 });
 
 // 색상 선택
-document.querySelectorAll(’#color-bar .cdot’).forEach(el => {
+document.querySelectorAll(’#color-tray .cdot’).forEach(el => {
 el.addEventListener(‘click’, () => setColor(el));
 });
 
 // 선 굵기 선택
-document.querySelectorAll(’#color-bar .sbtn’).forEach(el => {
+document.querySelectorAll(’#color-tray .sbtn’).forEach(el => {
 el.addEventListener(‘click’, () => setStroke(el, parseInt(el.dataset.sw)));
 });
 
