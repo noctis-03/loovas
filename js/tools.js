@@ -86,13 +86,13 @@ setTool(t);
 }
 
 export function setColor(el) {
-document.querySelectorAll(’#color-bar .cdot’).forEach(d => d.classList.remove(‘active’));
+document.querySelectorAll(’#color-tray .cdot’).forEach(d => d.classList.remove(‘active’));
 el.classList.add(‘active’);
 setColorState(el.dataset.c);
 }
 
 export function setStroke(el, v) {
-document.querySelectorAll(’#color-bar .sbtn’).forEach(b => b.classList.remove(‘active’));
+document.querySelectorAll(’#color-tray .sbtn’).forEach(b => b.classList.remove(‘active’));
 el.classList.add(‘active’);
 setSwState(v);
 }
