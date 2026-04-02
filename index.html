@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -40,6 +41,7 @@
 <canvas id="minimap" width="130" height="84"></canvas>
 
 <!-- ══ PEN SETTINGS PANEL ══ -->
+
 <div id="pen-panel">
   <div class="pp-title">
     <span id="pp-title-txt">✏️ 펜 설정</span>
@@ -104,59 +106,66 @@
   </div>
 </div>
 
-<!-- ══ TOOLBAR (가로 통일) ══ -->
+<!-- ══ MODE TOOLS (select / edit / pan) — toolbar 왼쪽 독립 그룹 ══ -->
+
+<div id="mode-bar">
+  <button class="tbtn active" id="t-select" data-tip="선택 (V)" data-tool="select">⊹</button>
+  <button class="tbtn" id="t-edit" data-tip="편집 (D)" data-tool="edit">✎</button>
+  <button class="tbtn" id="t-pan"  data-tip="이동 (H)" data-tool="pan">✋</button>
+</div>
+
+<!-- ══ TOOLBAR (그리기·생성·파일 도구) ══ -->
+
 <div id="toolbar">
   <div id="tb-drag-handle">⠿</div>
   <div id="tb-tools">
-    <button class="tbtn active" id="t-select" data-tip="선택 (V)" data-tool="select">⊹</button>
-    <button class="tbtn" id="t-edit" data-tip="편집 (D)" data-tool="edit">✎</button>
-    <button class="tbtn" id="t-pan" data-tip="이동 (H)" data-tool="pan">✋</button>
+    <button class="tbtn" id="t-pen"       data-tip="펜 (P) · 재클릭 → 설정"    data-tool-or-panel="pen">✏️</button>
+    <button class="tbtn" id="t-highlight" data-tip="형광펜 (L) · 재클릭 → 설정" data-tool-or-panel="highlight">🖊️</button>
+    <button class="tbtn" id="t-eraser"    data-tip="지우개 (E) · 재클릭 → 설정" data-tool-or-panel="eraser">◻</button>
     <div class="sep"></div>
-    <button class="tbtn" id="t-pen"       data-tip="펜 (P) · 재클릭 → 설정"       data-tool-or-panel="pen">✏️</button>
-    <button class="tbtn" id="t-highlight" data-tip="형광펜 (L) · 재클릭 → 설정"    data-tool-or-panel="highlight">🖊️</button>
-    <button class="tbtn" id="t-eraser"    data-tip="지우개 (E) · 재클릭 → 설정"    data-tool-or-panel="eraser">◻</button>
+    <button class="tbtn" id="t-sticky" data-tip="포스트잇 (S)" data-action="addSticky">📄</button>
+    <button class="tbtn" id="t-card"   data-tip="카드 창 (W)"  data-action="addCard">🪟</button>
+    <button class="tbtn" id="t-text"   data-tip="텍스트 (T)"   data-tool="text">T</button>
+    <button class="tbtn" id="t-rect"   data-tip="사각형 (R)"   data-tool="rect">□</button>
+    <button class="tbtn" id="t-circle" data-tip="원 (C)"       data-tool="circle">○</button>
+    <button class="tbtn" id="t-arrow"  data-tip="화살표 (A)"   data-tool="arrow">→</button>
     <div class="sep"></div>
-    <button class="tbtn" id="t-sticky" data-tip="포스트잇 (S)"  data-action="addSticky">📄</button>
-    <button class="tbtn" id="t-card"   data-tip="카드 창 (W)"   data-action="addCard">🪟</button>
-    <button class="tbtn" id="t-text"   data-tip="텍스트 (T)"    data-tool="text">T</button>
-    <button class="tbtn" id="t-rect"   data-tip="사각형 (R)"    data-tool="rect">□</button>
-    <button class="tbtn" id="t-circle" data-tip="원 (C)"        data-tool="circle">○</button>
-    <button class="tbtn" id="t-arrow"  data-tip="화살표 (A)"    data-tool="arrow">→</button>
-    <div class="sep"></div>
-    <button class="tbtn" data-tip="이미지" data-action="addImage">🖼️</button>
+    <button class="tbtn" data-tip="이미지"      data-action="addImage">🖼️</button>
     <button class="tbtn" data-tip="그리드 (G)"  data-action="toggleGrid">⊞</button>
-
-    <!-- ═══ NEW: Undo / Redo 버튼 ═══ -->
-    <div class="sep"></div>
-    <button class="tbtn undo-redo-btn" id="t-undo" data-tip="실행 취소 (Ctrl+Z)" data-action="undo">↩</button>
-    <button class="tbtn undo-redo-btn" id="t-redo" data-tip="다시 실행 (Ctrl+Shift+Z)" data-action="redo">↪</button>
-    <!-- ═══ END NEW ═══ -->
-
     <div class="sep"></div>
     <button class="tbtn" data-tip="저장 Ctrl+S" data-action="save">💾</button>
     <button class="tbtn" data-tip="불러오기"     data-action="load">📂</button>
     <button class="tbtn" data-tip="전체 지우기"  data-action="clearAll">🗑️</button>
   </div>
+
+  <!-- ══ COLOR TRAY — 그리기 도구 선택 시 toolbar 내부에 인라인 확장 ══ -->
+
+  <div id="color-tray">
+    <div class="ct-sep"></div>
+    <div class="cdot active" style="background:#1a1714" data-c="#1a1714"></div>
+    <div class="cdot" style="background:#c84b2f" data-c="#c84b2f"></div>
+    <div class="cdot" style="background:#2b6cb0" data-c="#2b6cb0"></div>
+    <div class="cdot" style="background:#2d8a4e" data-c="#2d8a4e"></div>
+    <div class="cdot" style="background:#7c3d9e" data-c="#7c3d9e"></div>
+    <div class="cdot" style="background:#e8a320" data-c="#e8a320"></div>
+    <div class="ct-sep"></div>
+    <button class="sbtn active" data-sw="2"><div class="sline" style="height:2px"></div></button>
+    <button class="sbtn"        data-sw="5"><div class="sline" style="height:4px"></div></button>
+    <button class="sbtn"        data-sw="10"><div class="sline" style="height:7px"></div></button>
+  </div>
 </div>
 
+<!-- ══ UNDO / REDO — toolbar 오른쪽 바깥 동그란 버튼 2개 ══ -->
 
-<!-- ══ COLOR BAR (그리기 도구 선택 시 나타남) ══ -->
-<div id="color-bar">
-  <div class="cdot active" style="background:#1a1714" data-c="#1a1714"></div>
-  <div class="cdot" style="background:#c84b2f" data-c="#c84b2f"></div>
-  <div class="cdot" style="background:#2b6cb0" data-c="#2b6cb0"></div>
-  <div class="cdot" style="background:#2d8a4e" data-c="#2d8a4e"></div>
-  <div class="cdot" style="background:#7c3d9e" data-c="#7c3d9e"></div>
-  <div class="cdot" style="background:#e8a320" data-c="#e8a320"></div>
-  <div class="cb-sep"></div>
-  <button class="sbtn active" data-sw="2"><div class="sline" style="height:2px"></div></button>
-  <button class="sbtn"        data-sw="5"><div class="sline" style="height:4px"></div></button>
-  <button class="sbtn"        data-sw="10"><div class="sline" style="height:7px"></div></button>
+<div id="ur-cluster">
+  <button class="ur-btn" id="t-undo" data-tip="실행 취소 (Ctrl+Z)"        data-action="undo">↩</button>
+  <button class="ur-btn" id="t-redo" data-tip="다시 실행 (Ctrl+Shift+Z)"  data-action="redo">↪</button>
 </div>
 
 <input type="file" id="img-in"  accept="image/*" style="display:none">
 <input type="file" id="load-in" style="display:none">
 
 <script type="module" src="js/main.js"></script>
+
 </body>
 </html>
