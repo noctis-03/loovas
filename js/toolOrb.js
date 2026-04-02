@@ -145,13 +145,15 @@ export function deactivateByTap() {
 export function scheduleRevertAfterUse() {
 //  if (!pendingTool || !_toolActivated) return;
 //  scheduleHide(HIDE_DELAY_USE);
+  return;
 }
 
 /** 도형 무시 시 revert 보장 */
 export function ensureRevertIfNeeded() {
 //  if (pendingTool && _toolActivated) {
 //    scheduleHide(HIDE_DELAY_USE);
-  }
+return;  
+}
 }
 
 /**
