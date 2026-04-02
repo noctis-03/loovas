@@ -1,14 +1,13 @@
 <!DOCTYPE html>
-
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#f5f2eb">
-<title>∞ Canvas 0.01</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#f5f2eb">
+  <title>∞ Canvas 0.01</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body data-tool="select">
 
@@ -106,7 +105,7 @@
   </div>
 </div>
 
-<!-- ══ MODE TOOLS (select / edit / pan) — toolbar 왼쪽 독립 그룹 ══ -->
+<!-- ══ MODE TOOLS (select / edit / pan) ══ -->
 
 <div id="mode-bar">
   <button class="tbtn active" id="t-select" data-tip="선택 (V)" data-tool="select">⊹</button>
@@ -114,7 +113,7 @@
   <button class="tbtn" id="t-pan"  data-tip="이동 (H)" data-tool="pan">✋</button>
 </div>
 
-<!-- ══ TOOLBAR (그리기·생성·파일 도구) ══ -->
+<!-- ══ TOOLBAR ══ -->
 
 <div id="toolbar">
   <div id="tb-drag-handle">⠿</div>
@@ -138,7 +137,7 @@
     <button class="tbtn" data-tip="전체 지우기"  data-action="clearAll">🗑️</button>
   </div>
 
-  <!-- ══ COLOR TRAY — 그리기 도구 선택 시 toolbar 내부에 인라인 확장 ══ -->
+  <!-- ══ COLOR TRAY ══ -->
 
   <div id="color-tray">
     <div class="ct-sep"></div>
@@ -155,7 +154,7 @@
   </div>
 </div>
 
-<!-- ══ UNDO / REDO — toolbar 오른쪽 바깥 동그란 버튼 2개 ══ -->
+<!-- ══ UNDO / REDO ══ -->
 
 <div id="ur-cluster">
   <button class="ur-btn" id="t-undo" data-tip="실행 취소 (Ctrl+Z)"        data-action="undo">↩</button>
