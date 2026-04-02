@@ -21,8 +21,8 @@ function applyInternal(t) {
 }
 
 function applyVisual(t) {
-  // toolbar + mode-bar 전체 tbtn 초기화
-  document.querySelectorAll('.tbtn[id^="t-"]').forEach(b => b.classList.remove('active'));
+  // 사이드바 sbtn + 레거시 tbtn 모두 초기화
+  document.querySelectorAll('.sbtn[id^="t-"], .tbtn[id^="t-"]').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('t-' + t);
   if (btn) btn.classList.add('active');
 }
@@ -94,7 +94,8 @@ export function setColor(el) {
 }
 
 export function setStroke(el, v) {
-  document.querySelectorAll('#color-tray .sbtn').forEach(b => b.classList.remove('active'));
+  // 새 sw-btn 클래스 + 레거시 sbtn 모두 지원
+  document.querySelectorAll('#color-tray .sw-btn, #color-tray .sbtn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   setSwState(v);
 }

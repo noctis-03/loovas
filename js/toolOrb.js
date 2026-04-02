@@ -721,7 +721,7 @@ let strokeBtns    = null;
 let strokeBaseIdx = 0;
 
 function getStrokeBtns() {
-  if (!strokeBtns) strokeBtns = [...document.querySelectorAll('#color-tray .sbtn')];
+  if (!strokeBtns) strokeBtns = [...document.querySelectorAll('#color-tray .sw-btn, #color-tray .sbtn')];
   return strokeBtns;
 }
 

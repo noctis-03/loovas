@@ -47,36 +47,28 @@ export function closePenPanel() {
 
 function positionPenPanel(t) {
   const pp = document.getElementById('pen-panel');
-  const tb = document.getElementById('toolbar');
-  if (!tb) return;
+  const ppW = 220;
+  const ppH = 360;
 
-  const tr = tb.getBoundingClientRect();
-  const ppW = 228;
-  const ppH = 420; // 대략 높이
-
-  // 툴바 버튼 찾기
+  // 사이드바 버튼 기준으로 위치 계산
   const btn = document.getElementById('t-' + t);
-  const br = btn ? btn.getBoundingClientRect() : tr;
+  const sidebar = document.getElementById('left-sidebar');
+  const sidebarW = sidebar ? sidebar.offsetWidth : 56;
 
-  // 화면 반분 기준: 위에 있으면 아래로, 아래에 있으면 위로
-  const tbMidY = tr.top + tr.height / 2;
-  const above = tbMidY < window.innerHeight / 2;
-
-  let x = br.left + br.width / 2 - ppW / 2;
-  let y;
-
-  if (above) {
-    y = tr.bottom + 12;
-  } else {
-    y = tr.top - ppH - 12;
+  if (btn) {
+    const br = btn.getBoundingClientRect();
+    let x = sidebarW + 10;
+    let y = br.top + br.height / 2 - ppH / 2;
+    x = Math.max(sidebarW + 8, Math.min(x, window.innerWidth - ppW - 8));
+    y = Math.max(8, Math.min(y, window.innerHeight - ppH - 8));
+    pp.style.left = x + 'px';
+    pp.style.top  = y + 'px';
+    return;
   }
 
-  // 화면 밖 보정
-  x = Math.max(8, Math.min(x, window.innerWidth - ppW - 8));
-  y = Math.max(8, Math.min(y, window.innerHeight - ppH - 8));
-
-  pp.style.left = x + 'px';
-  pp.style.top = y + 'px';
+  // 폴백
+  pp.style.left = (sidebarW + 10) + 'px';
+  pp.style.top  = Math.round((window.innerHeight - ppH) / 2) + 'px';
 }
 
 export function onPPChange() {
