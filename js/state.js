@@ -1,16 +1,30 @@
 // ═══════════════════════════════════════════════════
 //  state.js — 전역 상태 & DOM 참조
+//
+//  FIX: DOM 참조를 즉시 실행하지 않고 initDomRefs()로 지연 초기화
 // ═══════════════════════════════════════════════════
 
-// DOM references
-export const vp      = document.getElementById('viewport');
-export const board   = document.getElementById('board');
-export const svgl    = document.getElementById('svg-layer');
-export const pCvs    = document.getElementById('preview-canvas');
-export const pCtx    = pCvs.getContext('2d');
-export const mmCvs   = document.getElementById('minimap');
-export const mmCtx   = mmCvs.getContext('2d');
-export const selRect = document.getElementById('sel-rect');
+// DOM references — 지연 초기화
+export let vp      = null;
+export let board   = null;
+export let svgl    = null;
+export let pCvs    = null;
+export let pCtx    = null;
+export let mmCvs   = null;
+export let mmCtx   = null;
+export let selRect = null;
+
+/** main.js init()에서 가장 먼저 호출 */
+export function initDomRefs() {
+  vp      = document.getElementById('viewport');
+  board   = document.getElementById('board');
+  svgl    = document.getElementById('svg-layer');
+  pCvs    = document.getElementById('preview-canvas');
+  pCtx    = pCvs.getContext('2d');
+  mmCvs   = document.getElementById('minimap');
+  mmCtx   = mmCvs.getContext('2d');
+  selRect = document.getElementById('sel-rect');
+}
 
 // Transform state
 export const T = { x: 0, y: 0, s: 1 };
