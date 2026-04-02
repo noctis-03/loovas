@@ -1,12 +1,15 @@
 // ═══════════════════════════════════════════════════
-//  toolOrb.js — 고정 위치 도구 Orb (v4.0)
+//  toolOrb.js — 고정 위치 도구 Orb (v4.3)
 //
 //  ★ MODIFIED:
 //    - 자동 꺼짐 기능 제거
-//    - 원형 메뉴 경계 시스템 추가
+//    - 터치 포인트와 Orb 간 원형 경계 유지 (가까우면 밀려남, 멀면 따라옴)
 //    - 위로 드래그 → 펜 굵기 선택 추가
 //    - 편집 모드 화면 테두리 강조 추가
 //    - 더블탭 → 지우개 전환 추가
+//    - ORB_MIN_DIST / SPEED 파라미터 튜닝 (팬 포인터 회피 최적화)
+//    - ★ v4.3: Orb가 입력 좌표의 오른쪽에 있으면
+//              거리 무관하게 왼쪽 위 스폰 위치로 즉시 순간이동
 // ═══════════════════════════════════════════════════
 
 import { tool, pendingTool } from './state.js';
@@ -22,16 +25,27 @@ const DIR_LOCK_DIST      = 14;
 const LONGPRESS_MS       = 400;
 const TAP_TIME_THRESH    = 280;
 const COLOR_DRAG_THRESH  = 60;
-const STROKE_DRAG_THRESH = 60;  // ★ NEW: 굵기 모드 진입 임계값
+const STROKE_DRAG_THRESH = 60;
 
-// ★ NEW: 원형 경계 설정
-const ORB_CIRCLE_MIN_R = 80;
-const ORB_CIRCLE_MAX_R = 250;
+// Orb ↔ 터치 포인트 간 원형 경계
+const ORB_MIN_DIST     = 80;
+const ORB_MAX_DIST     = 180;
+const ORB_FOLLOW_SPEED = 0.12;
+const ORB_PUSH_SPEED   = 0.4;
 
-// ★ NEW: 더블탭 설정
+// ★ 순간이동 목적지 오프셋 (스폰과 동일)
+const TELEPORT_OFFSET_X = -40;  // 터치 기준 왼쪽
+const TELEPORT_OFFSET_Y = -50;  // 터치 기준 위
+
+// 더블탭 설정
 const DOUBLE_TAP_INTERVAL = 350;
 let lastTapTime = 0;
 let toolBeforeEraser = null;
+
+// 터치 추적용
+let lastTouchX = -9999;
+let lastTouchY = -9999;
+let orbFollowRAF = null;
 
 // ── FSM ──
 const State = Object.freeze({
@@ -85,21 +99,20 @@ function isTouchDevice() {
   return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 }
 
-/** Orb가 현재 화면에 보이는 상태인지 */
 function isOrbVisible() {
   return fsm === State.SHOWN || fsm === State.HOLD ||
     fsm === State.RELOCATING || fsm === State.TOOL_DRAG;
 }
 
 // ═══════════════════════════════════════════════════
-//  ★ NEW: 편집 모드 화면 테두리 강조
+//  편집 모드 화면 테두리 강조
 // ═══════════════════════════════════════════════════
 
 let badgeTimer = null;
 
 function showEditModeBorder() {
   const border = document.getElementById('edit-mode-border');
-  const badge = document.getElementById('edit-mode-badge');
+  const badge  = document.getElementById('edit-mode-badge');
   if (border) border.classList.add('active');
   if (badge) {
     badge.classList.add('active');
@@ -113,112 +126,130 @@ function showEditModeBorder() {
 
 function hideEditModeBorder() {
   const border = document.getElementById('edit-mode-border');
-  const badge = document.getElementById('edit-mode-badge');
+  const badge  = document.getElementById('edit-mode-badge');
   if (border) border.classList.remove('active');
-  if (badge) badge.classList.remove('active');
+  if (badge)  badge.classList.remove('active');
   if (badgeTimer) { clearTimeout(badgeTimer); badgeTimer = null; }
 }
 
 // ═══════════════════════════════════════════════════
-//  ★ NEW: 원형 메뉴 경계 시스템
+//  ★ Orb ↔ 터치 포인트 간 원형 경계 + 오른쪽 순간이동
+//
+//  판단 순서:
+//  1) orbX > lastTouchX  →  오른쪽에 있음
+//                            거리 무관하게 즉시 TELEPORT (왼쪽 위 스폰 위치)
+//  2) dist < ORB_MIN_DIST →  왼쪽/위/아래에서 너무 가까움 → 부드럽게 밀어냄
+//  3) dist > ORB_MAX_DIST →  너무 멀어짐 → 부드럽게 따라옴
+//  4) MIN ~ MAX 사이      →  제자리
 // ═══════════════════════════════════════════════════
 
-function enforceCircleBoundary() {
-  if (!isOrbVisible()) return;
+export function updateTouchPosition(sx, sy) {
+  lastTouchX = sx;
+  lastTouchY = sy;
 
-  const targets = [
-    document.getElementById('toolbar'),
-    document.getElementById('mode-bar'),
-    document.getElementById('ur-cluster'),
-  ];
+  if (!_toolActivated || !isOrbVisible()) return;
+  if (fsm === State.HOLD || fsm === State.RELOCATING || fsm === State.TOOL_DRAG) return;
 
-  targets.forEach(el => {
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const menuCx = rect.left + rect.width / 2;
-    const menuCy = rect.top + rect.height / 2;
-
-    const dx = menuCx - orbX;
-    const dy = menuCy - orbY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    if (dist < ORB_CIRCLE_MIN_R && dist > 0) {
-      // 최소 거리 안에 있으면 → 원 밖으로 밀어냄
-      const angle = Math.atan2(dy, dx);
-      const pushX = orbX + Math.cos(angle) * ORB_CIRCLE_MIN_R;
-      const pushY = orbY + Math.sin(angle) * ORB_CIRCLE_MIN_R;
-
-      const offsetX = pushX - menuCx;
-      const offsetY = pushY - menuCy;
-
-      const curLeft = parseFloat(el.style.left) || 0;
-      const curTop = parseFloat(el.style.top) || 0;
-
-      let newLeft = Math.round(curLeft + offsetX);
-      let newTop = Math.round(curTop + offsetY);
-
-      // 화면 밖 방지
-      newLeft = Math.max(4, Math.min(newLeft, window.innerWidth - rect.width - 4));
-      newTop = Math.max(4, Math.min(newTop, window.innerHeight - rect.height - 4));
-
-      el.style.transition = 'left 0.2s ease, top 0.2s ease';
-      el.style.left = newLeft + 'px';
-      el.style.top = newTop + 'px';
-      setTimeout(() => { el.style.transition = ''; }, 220);
-    } else if (dist > ORB_CIRCLE_MAX_R) {
-      // 최대 거리 밖에 있으면 → 최대 거리까지 끌어당김
-      const angle = Math.atan2(dy, dx);
-      const pullX = orbX + Math.cos(angle) * ORB_CIRCLE_MAX_R;
-      const pullY = orbY + Math.sin(angle) * ORB_CIRCLE_MAX_R;
-
-      const offsetX = pullX - menuCx;
-      const offsetY = pullY - menuCy;
-
-      const curLeft = parseFloat(el.style.left) || 0;
-      const curTop = parseFloat(el.style.top) || 0;
-
-      let newLeft = Math.round(curLeft + offsetX);
-      let newTop = Math.round(curTop + offsetY);
-
-      newLeft = Math.max(4, Math.min(newLeft, window.innerWidth - rect.width - 4));
-      newTop = Math.max(4, Math.min(newTop, window.innerHeight - rect.height - 4));
-
-      el.style.transition = 'left 0.3s ease, top 0.3s ease';
-      el.style.left = newLeft + 'px';
-      el.style.top = newTop + 'px';
-      setTimeout(() => { el.style.transition = ''; }, 320);
-    }
-  });
+  startOrbFollow();
 }
 
+function startOrbFollow() {
+  if (orbFollowRAF) return;
+  orbFollowRAF = requestAnimationFrame(orbFollowLoop);
+}
+
+function stopOrbFollow() {
+  if (orbFollowRAF) {
+    cancelAnimationFrame(orbFollowRAF);
+    orbFollowRAF = null;
+  }
+}
+
+function orbFollowLoop() {
+  orbFollowRAF = null;
+
+  if (!_toolActivated || !isOrbVisible()) return;
+  if (fsm === State.HOLD || fsm === State.RELOCATING || fsm === State.TOOL_DRAG) return;
+  if (lastTouchX < -9000) return;
+
+  const half = ORB_SIZE / 2;
+
+  // ── ★ 조건 1: 오른쪽에 있으면 거리 무관하게 즉시 순간이동 ──
+  if (orbX > lastTouchX) {
+    orbX = Math.max(half, Math.min(lastTouchX + TELEPORT_OFFSET_X, window.innerWidth  - half));
+    orbY = Math.max(half, Math.min(lastTouchY + TELEPORT_OFFSET_Y, window.innerHeight - half));
+    applyPosition();
+    // 순간이동 후 새 위치가 여전히 오른쪽이면 (화면 끝 클램핑 등) 다음 프레임에서 재처리
+    return;
+  }
+
+  const dx   = orbX - lastTouchX;
+  const dy   = orbY - lastTouchY;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  let targetX  = orbX;
+  let targetY  = orbY;
+  let needsMove = false;
+
+  if (dist < ORB_MIN_DIST && dist > 0.1) {
+    // ── 조건 2: 왼쪽/위/아래에서 너무 가까움 → 부드럽게 밀어냄 ──
+    const angle = Math.atan2(dy, dx);
+    targetX = lastTouchX + Math.cos(angle) * ORB_MIN_DIST;
+    targetY = lastTouchY + Math.sin(angle) * ORB_MIN_DIST;
+
+    orbX += (targetX - orbX) * ORB_PUSH_SPEED;
+    orbY += (targetY - orbY) * ORB_PUSH_SPEED;
+    needsMove = true;
+
+  } else if (dist > ORB_MAX_DIST) {
+    // ── 조건 3: 너무 멀어짐 → 부드럽게 따라옴 ──
+    const angle = Math.atan2(dy, dx);
+    targetX = lastTouchX + Math.cos(angle) * ORB_MAX_DIST;
+    targetY = lastTouchY + Math.sin(angle) * ORB_MAX_DIST;
+
+    orbX += (targetX - orbX) * ORB_FOLLOW_SPEED;
+    orbY += (targetY - orbY) * ORB_FOLLOW_SPEED;
+    needsMove = true;
+  }
+  // 조건 4: MIN ~ MAX 사이 → 아무것도 안 함
+
+  if (needsMove) {
+    orbX = Math.max(half, Math.min(orbX, window.innerWidth  - half));
+    orbY = Math.max(half, Math.min(orbY, window.innerHeight - half));
+    applyPosition();
+
+    const remDx = targetX - orbX;
+    const remDy = targetY - orbY;
+    if (Math.abs(remDx) > 1 || Math.abs(remDy) > 1) {
+      orbFollowRAF = requestAnimationFrame(orbFollowLoop);
+    }
+  }
+}
 
 // ═══════════════════════════════════════════════════
 //  외부 API
 // ═══════════════════════════════════════════════════
 
-export function isOrbLocked() { return _orbLock; }
+export function isOrbLocked()    { return _orbLock; }
 export { _orbLock as orbLock };
 
 export function isToolActivated() { return _toolActivated; }
 export { _toolActivated as toolActivated };
 
-/**
- * tools.js에서 도구 변경 시 호출 (bridgeNotifyToolChanged 경유)
- */
 export function notifyToolChanged(t) {
   updateLabel(t);
 
   if (NO_ORB_TOOLS.has(t)) {
     _toolActivated = false;
     if (orb) orb.classList.remove('orb-tool-active');
-    hideEditModeBorder(); // ★ NEW
+    hideEditModeBorder();
+    stopOrbFollow();
     transition(State.HIDDEN);
     return;
   }
 
   if (isOrbVisible()) {
     if (orb) orb.classList.toggle('orb-tool-active', _toolActivated);
-    // ★ MODIFIED: 자동 꺼짐 제거 — scheduleHide 호출하지 않음
     return;
   }
 
@@ -226,21 +257,17 @@ export function notifyToolChanged(t) {
   if (orb) orb.classList.remove('orb-tool-active');
 }
 
-/**
- * 터치 탭으로 도구 활성화 + Orb 생성
- */
 export function tryActivateByTap(tx, ty) {
   if (!pendingTool) return false;
   if (_toolActivated) return true;
 
   bridgeActivatePending();
   _toolActivated = true;
-  showEditModeBorder(); // ★ NEW
+  showEditModeBorder();
 
   if (isOrbVisible()) {
     if (orb) orb.classList.add('orb-tool-active');
     updateLabel(pendingTool);
-    // ★ MODIFIED: 자동 꺼짐 제거
   } else {
     spawnOrbAt(tx + SPAWN_OFFSET_X, ty + SPAWN_OFFSET_Y);
   }
@@ -248,42 +275,19 @@ export function tryActivateByTap(tx, ty) {
   return true;
 }
 
-/** Orb 탭으로 비활성화 */
 export function deactivateByTap() {
   if (!_toolActivated) return;
   bridgeRevertToPan();
   _toolActivated = false;
-  hideEditModeBorder(); // ★ NEW
+  hideEditModeBorder();
+  stopOrbFollow();
   transition(State.HIDDEN);
 }
 
-/** 그리기 완료 후 — ★ MODIFIED: 자동 꺼짐 제거 (빈 함수) */
-export function scheduleRevertAfterUse() {
-  // 자동 꺼짐 비활성화 — 아무것도 하지 않음
-  return;
-}
-
-/** 도형 무시 시 — ★ MODIFIED: 자동 꺼짐 제거 (빈 함수) */
-export function ensureRevertIfNeeded() {
-  // 자동 꺼짐 비활성화 — 아무것도 하지 않음
-  return;
-}
-
-/**
- * 도구 사용 중 타이머 리셋 — ★ MODIFIED: 빈 함수
- */
-export function resetOrbTimer() {
-  // 자동 꺼짐 제거됨
-  return;
-}
-
-/**
- * 도구 사용 완료 후 타이머 재시작 — ★ MODIFIED: 빈 함수
- */
-export function restartOrbTimer(delay) {
-  // 자동 꺼짐 제거됨
-  return;
-}
+export function scheduleRevertAfterUse() { return; }
+export function ensureRevertIfNeeded()   { return; }
+export function resetOrbTimer()          { return; }
+export function restartOrbTimer(delay)   { return; }
 
 // ═══════════════════════════════════════════════════
 //  초기화
@@ -294,7 +298,7 @@ export function initToolOrb() {
 
   orb = document.createElement('div');
   orb.id = 'tool-orb';
-  orb.style.width = ORB_SIZE + 'px';
+  orb.style.width  = ORB_SIZE + 'px';
   orb.style.height = ORB_SIZE + 'px';
   orb.setAttribute('role', 'status');
   orb.setAttribute('aria-label', '도구 선택 Orb');
@@ -306,9 +310,9 @@ export function initToolOrb() {
   document.body.appendChild(orb);
 
   orb.addEventListener('pointerdown', onOrbPointerDown);
-  window.addEventListener('pointermove', onGlobalMove, true);
-  window.addEventListener('pointerup', onGlobalUp, true);
-  window.addEventListener('pointercancel', onGlobalUp, true);
+  window.addEventListener('pointermove', onGlobalMove,   true);
+  window.addEventListener('pointerup',   onGlobalUp,     true);
+  window.addEventListener('pointercancel', onGlobalUp,   true);
 
   updateLabel(tool);
 }
@@ -319,7 +323,7 @@ export function initToolOrb() {
 
 function spawnOrbAt(x, y) {
   const half = ORB_SIZE / 2;
-  orbX = Math.max(half, Math.min(x, window.innerWidth - half));
+  orbX = Math.max(half, Math.min(x, window.innerWidth  - half));
   orbY = Math.max(half, Math.min(y, window.innerHeight - half));
   applyPosition();
   transition(State.SHOWN);
@@ -346,11 +350,11 @@ function exitState(s) {
       if (orb) {
         orb.classList.remove('orb-active');
         orb.classList.remove('orb-color-mode');
-        orb.classList.remove('orb-stroke-mode'); // ★ NEW
+        orb.classList.remove('orb-stroke-mode');
       }
       clearPreviewHighlight();
       clearColorHighlight();
-      clearStrokeHighlight(); // ★ NEW
+      clearStrokeHighlight();
       highlightColorBar(false);
       const tb = document.getElementById('toolbar');
       if (tb) tb.classList.remove('tb-orb-zoom');
@@ -362,24 +366,22 @@ function enterState(s) {
   switch (s) {
     case State.HIDDEN:
       hideOrbNow();
+      stopOrbFollow();
       if (_toolActivated) {
         bridgeRevertToPan();
         _toolActivated = false;
-        hideEditModeBorder(); // ★ NEW
+        hideEditModeBorder();
       }
       break;
 
     case State.SHOWN:
       showOrb();
-      // ★ MODIFIED: 자동 꺼짐 제거 — scheduleHide 호출하지 않음
       break;
 
     case State.HOLD:
-      // ★ MODIFIED: 자동 꺼짐 제거
       break;
 
     case State.RELOCATING:
-      // ★ MODIFIED: 자동 꺼짐 제거
       break;
 
     case State.TOOL_DRAG: {
@@ -387,21 +389,20 @@ function enterState(s) {
       if (orb) orb.classList.add('orb-active');
 
       const baseTool = pendingTool || tool;
-      const order = getToolOrder();
+      const order    = getToolOrder();
 
-      ctx.baseIdx = order.indexOf(baseTool);
+      ctx.baseIdx            = order.indexOf(baseTool);
       if (ctx.baseIdx === -1) ctx.baseIdx = 0;
-      ctx.steps = 0;
-      ctx.previewTool = baseTool;
-      ctx.colorMode = false;
-      ctx.colorBaseResolved = false;
-      ctx.colorSteps = 0;
-      ctx.previewColorIdx = -1;
-      // ★ NEW: 굵기 모드 초기값
-      ctx.strokeMode = false;
+      ctx.steps              = 0;
+      ctx.previewTool        = baseTool;
+      ctx.colorMode          = false;
+      ctx.colorBaseResolved  = false;
+      ctx.colorSteps         = 0;
+      ctx.previewColorIdx    = -1;
+      ctx.strokeMode         = false;
       ctx.strokeBaseResolved = false;
-      ctx.strokeSteps = 0;
-      ctx.previewStrokeIdx = -1;
+      ctx.strokeSteps        = 0;
+      ctx.previewStrokeIdx   = -1;
 
       updateLabel(baseTool);
       const tbEl = document.getElementById('toolbar');
@@ -426,22 +427,19 @@ function onOrbPointerDown(e) {
   try { orb.setPointerCapture(e.pointerId); } catch (_) {}
 
   transition(State.HOLD, {
-    startX: e.clientX,
-    startY: e.clientY,
+    startX:    e.clientX,
+    startY:    e.clientY,
     orbStartX: orbX,
     orbStartY: orbY,
     pointerId: e.pointerId,
-    downTime: Date.now(),
+    downTime:  Date.now(),
     dirLocked: false,
   });
 
   longPressTimer = setTimeout(() => {
     longPressTimer = null;
     if (fsm === State.HOLD && !ctx.dirLocked) {
-      transition(State.TOOL_DRAG, {
-        startX: ctx.startX,
-        startY: ctx.startY,
-      });
+      transition(State.TOOL_DRAG, { startX: ctx.startX, startY: ctx.startY });
     }
   }, LONGPRESS_MS);
 }
@@ -464,8 +462,8 @@ function onGlobalMove(e) {
     case State.HOLD: {
       e.stopPropagation();
       e.preventDefault();
-      const dx = e.clientX - ctx.startX;
-      const dy = e.clientY - ctx.startY;
+      const dx   = e.clientX - ctx.startX;
+      const dy   = e.clientY - ctx.startY;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (!ctx.dirLocked && dist > DIR_LOCK_DIST) {
@@ -473,14 +471,11 @@ function onGlobalMove(e) {
         cancelLongPress();
 
         if (Math.abs(dx) > Math.abs(dy)) {
-          transition(State.TOOL_DRAG, {
-            startX: ctx.startX,
-            startY: ctx.startY,
-          });
+          transition(State.TOOL_DRAG, { startX: ctx.startX, startY: ctx.startY });
         } else {
           transition(State.RELOCATING, {
-            startX: ctx.startX,
-            startY: ctx.startY,
+            startX:    ctx.startX,
+            startY:    ctx.startY,
             orbStartX: ctx.orbStartX,
             orbStartY: ctx.orbStartY,
             pointerId: ctx.pointerId,
@@ -499,7 +494,7 @@ function onGlobalMove(e) {
       orbY = ctx.orbStartY + dy;
 
       const half = ORB_SIZE / 2;
-      orbX = Math.max(half, Math.min(orbX, window.innerWidth - half));
+      orbX = Math.max(half, Math.min(orbX, window.innerWidth  - half));
       orbY = Math.max(half, Math.min(orbY, window.innerHeight - half));
 
       applyPosition();
@@ -527,83 +522,65 @@ function onGlobalUp(e) {
       if (elapsed < TAP_TIME_THRESH) {
         handleOrbSingleTap();
       } else {
-        if (_toolActivated) {
-          transition(State.SHOWN);
-        } else {
-          transition(State.HIDDEN);
-        }
+        transition(_toolActivated ? State.SHOWN : State.HIDDEN);
       }
       break;
     }
 
     case State.RELOCATING: {
       try { orb.releasePointerCapture(ctx.pointerId || e.pointerId); } catch (_) {}
-      if (_toolActivated) {
-        transition(State.SHOWN);
-      } else {
-        transition(State.HIDDEN);
-      }
+      transition(_toolActivated ? State.SHOWN : State.HIDDEN);
       break;
     }
   }
 }
 
 // ═══════════════════════════════════════════════════
-//  ★ MODIFIED: 싱글탭 + 더블탭 감지
+//  싱글탭 + 더블탭 감지
 // ═══════════════════════════════════════════════════
 
 function handleOrbSingleTap() {
-  const now = Date.now();
+  const now         = Date.now();
   const isDoubleTap = (now - lastTapTime) < DOUBLE_TAP_INTERVAL;
   lastTapTime = now;
 
-  if (isDoubleTap) {
-    handleOrbDoubleTap();
-    return;
-  }
+  if (isDoubleTap) { handleOrbDoubleTap(); return; }
 
-  // ── 기존 싱글탭 로직 ──
-  if (!pendingTool) {
-    transition(State.HIDDEN);
-    return;
-  }
+  if (!pendingTool) { transition(State.HIDDEN); return; }
 
   if (_toolActivated) {
     bridgeRevertToPan();
     _toolActivated = false;
     if (orb) orb.classList.remove('orb-tool-active');
-    hideEditModeBorder(); // ★ NEW
+    hideEditModeBorder();
+    stopOrbFollow();
     updateLabel(pendingTool);
     transition(State.HIDDEN);
   } else {
     bridgeActivatePending();
     _toolActivated = true;
     if (orb) orb.classList.add('orb-tool-active');
-    showEditModeBorder(); // ★ NEW
+    showEditModeBorder();
     updateLabel(pendingTool);
     transition(State.SHOWN);
   }
 }
 
-// ★ NEW: 더블탭 → 지우개 전환
 function handleOrbDoubleTap() {
   const currentPending = pendingTool;
 
   if (currentPending === 'eraser') {
-    // 이미 지우개 → 이전 도구로 복귀
     if (toolBeforeEraser) {
       bridgeSetTool(toolBeforeEraser);
       updateLabel(toolBeforeEraser);
       toolBeforeEraser = null;
     }
   } else {
-    // 현재 도구 기억 후 지우개로 전환
     toolBeforeEraser = currentPending || tool;
     bridgeSetTool('eraser');
     updateLabel('eraser');
   }
 
-  // 활성화 상태 유지
   if (!_toolActivated) {
     bridgeActivatePending();
     _toolActivated = true;
@@ -615,21 +592,20 @@ function handleOrbDoubleTap() {
 }
 
 // ═══════════════════════════════════════════════════
-//  ★ MODIFIED: 도구 순환 드래그 + 색상 모드 + 굵기 모드
+//  도구 순환 드래그 + 색상 모드 + 굵기 모드
 // ═══════════════════════════════════════════════════
 
 function handleToolDragMove(e) {
   const totalDx = e.clientX - ctx.startX;
   const totalDy = e.clientY - ctx.startY;
 
-  // ── ★ NEW: 굵기 모드 진입: 위로 충분히 올림 ──
+  // 굵기 모드 진입: 위로 충분히 올림
   if (!ctx.colorMode && !ctx.strokeMode && totalDy < -STROKE_DRAG_THRESH) {
-    ctx.strokeMode = true;
-    ctx.strokeStartX = e.clientX;
-    ctx.strokeSteps = 0;
-    ctx.previewStrokeIdx = -1;
+    ctx.strokeMode         = true;
+    ctx.strokeStartX       = e.clientX;
+    ctx.strokeSteps        = 0;
+    ctx.previewStrokeIdx   = -1;
     ctx.strokeBaseResolved = false;
-
     clearPreviewHighlight();
     if (orb) orb.classList.add('orb-stroke-mode');
     updateLabel('📏');
@@ -637,11 +613,10 @@ function handleToolDragMove(e) {
     return;
   }
 
-  // ── ★ NEW: 굵기 모드 중 ──
+  // 굵기 모드 중
   if (ctx.strokeMode) {
-    // 아래로 돌아오면 도구 모드 복귀
     if (totalDy > -STROKE_DRAG_THRESH + 20) {
-      ctx.strokeMode = false;
+      ctx.strokeMode         = false;
       ctx.strokeBaseResolved = false;
       if (orb) orb.classList.remove('orb-stroke-mode');
       clearStrokeHighlight();
@@ -649,11 +624,7 @@ function handleToolDragMove(e) {
       if (ctx.previewTool) previewToolHighlight(ctx.previewTool);
       return;
     }
-
-    // 좌우로 굵기 순환
-    const strokeDx = e.clientX - ctx.strokeStartX;
-    const strokeSteps = Math.trunc(strokeDx / DRAG_THRESH);
-
+    const strokeSteps = Math.trunc((e.clientX - ctx.strokeStartX) / DRAG_THRESH);
     if (strokeSteps !== ctx.strokeSteps) {
       ctx.strokeSteps = strokeSteps;
       selectStrokeByStep(strokeSteps);
@@ -661,14 +632,13 @@ function handleToolDragMove(e) {
     return;
   }
 
-  // ── 색상 모드 진입: 아래로 충분히 내림 ──
+  // 색상 모드 진입: 아래로 충분히 내림
   if (!ctx.colorMode && totalDy > COLOR_DRAG_THRESH) {
-    ctx.colorMode = true;
-    ctx.colorStartX = e.clientX;
-    ctx.colorSteps = 0;
-    ctx.previewColorIdx = -1;
+    ctx.colorMode         = true;
+    ctx.colorStartX       = e.clientX;
+    ctx.colorSteps        = 0;
+    ctx.previewColorIdx   = -1;
     ctx.colorBaseResolved = false;
-
     clearPreviewHighlight();
     if (orb) orb.classList.add('orb-color-mode');
     updateLabel('🎨');
@@ -676,11 +646,10 @@ function handleToolDragMove(e) {
     return;
   }
 
-  // ── 색상 모드 중 ──
+  // 색상 모드 중
   if (ctx.colorMode) {
-    // 위로 돌아가면 도구 모드 복귀
     if (totalDy < COLOR_DRAG_THRESH - 20) {
-      ctx.colorMode = false;
+      ctx.colorMode         = false;
       ctx.colorBaseResolved = false;
       if (orb) orb.classList.remove('orb-color-mode');
       highlightColorBar(false);
@@ -689,11 +658,7 @@ function handleToolDragMove(e) {
       if (ctx.previewTool) previewToolHighlight(ctx.previewTool);
       return;
     }
-
-    // 좌우로 색상 순환
-    const colorDx = e.clientX - ctx.colorStartX;
-    const colorSteps = Math.trunc(colorDx / DRAG_THRESH);
-
+    const colorSteps = Math.trunc((e.clientX - ctx.colorStartX) / DRAG_THRESH);
     if (colorSteps !== ctx.colorSteps) {
       ctx.colorSteps = colorSteps;
       selectColorByStep(colorSteps);
@@ -701,13 +666,12 @@ function handleToolDragMove(e) {
     return;
   }
 
-  // ── 기존 도구 순환 ──
+  // 도구 순환
   const newSteps = Math.trunc(totalDx / DRAG_THRESH);
-
   if (newSteps !== ctx.steps) {
     ctx.steps = newSteps;
     const order = getToolOrder();
-    const idx = Math.max(0, Math.min(ctx.baseIdx + newSteps, order.length - 1));
+    const idx   = Math.max(0, Math.min(ctx.baseIdx + newSteps, order.length - 1));
     const newTool = order[idx];
 
     if (newTool !== ctx.previewTool) {
@@ -720,48 +684,44 @@ function handleToolDragMove(e) {
 }
 
 function finishToolDrag() {
-  const wasColorMode = ctx.colorMode;
-  const wasStrokeMode = ctx.strokeMode; // ★ NEW
-  const selectedTool = ctx.previewTool;
+  const wasColorMode  = ctx.colorMode;
+  const wasStrokeMode = ctx.strokeMode;
+  const selectedTool  = ctx.previewTool;
 
-  if (wasColorMode || wasStrokeMode) { // ★ MODIFIED
+  if (wasColorMode || wasStrokeMode) {
     updateLabel(pendingTool || tool);
     transition(State.SHOWN);
     return;
   }
 
   const isDrawing = selectedTool && !NO_ORB_TOOLS.has(selectedTool);
-
-  if (selectedTool) {
-    bridgeSetTool(selectedTool);
-  }
+  if (selectedTool) bridgeSetTool(selectedTool);
 
   if (isDrawing) {
     bridgeActivatePending();
     _toolActivated = true;
-    showEditModeBorder(); // ★ NEW
+    showEditModeBorder();
     if (orb) orb.classList.add('orb-tool-active');
     updateLabel(selectedTool);
     transition(State.SHOWN);
   } else {
     _toolActivated = false;
-    hideEditModeBorder(); // ★ NEW
+    hideEditModeBorder();
+    stopOrbFollow();
     if (orb) orb.classList.remove('orb-tool-active');
     transition(State.HIDDEN);
   }
 }
 
 // ═══════════════════════════════════════════════════
-//  ★ NEW: 굵기 선택 헬퍼
+//  굵기 선택 헬퍼
 // ═══════════════════════════════════════════════════
 
-let strokeBtns = null;
+let strokeBtns    = null;
 let strokeBaseIdx = 0;
 
 function getStrokeBtns() {
-  if (!strokeBtns) {
-    strokeBtns = [...document.querySelectorAll('#color-tray .sbtn')];
-  }
+  if (!strokeBtns) strokeBtns = [...document.querySelectorAll('#color-tray .sbtn')];
   return strokeBtns;
 }
 
@@ -776,7 +736,6 @@ function selectStrokeByStep(step) {
   }
 
   const idx = Math.max(0, Math.min(strokeBaseIdx + step, btns.length - 1));
-
   clearStrokeHighlight();
   btns[idx].classList.add('sbtn-orb-highlight');
 
@@ -784,11 +743,7 @@ function selectStrokeByStep(step) {
     ctx.previewStrokeIdx = idx;
     btns[idx].click();
     if (navigator.vibrate) navigator.vibrate(8);
-
-    if (orbLabel) {
-      const sw = btns[idx].dataset.sw;
-      orbLabel.textContent = `${sw}px`;
-    }
+    if (orbLabel) orbLabel.textContent = `${btns[idx].dataset.sw}px`;
   }
 }
 
@@ -820,10 +775,7 @@ function previewToolHighlight(t) {
 
   const container = document.getElementById('tb-tools');
   if (container) {
-    const btnLeft   = btn.offsetLeft;
-    const btnWidth  = btn.offsetWidth;
-    const contWidth = container.offsetWidth;
-    const target    = btnLeft - (contWidth - btnWidth) / 2;
+    const target = btn.offsetLeft - (container.offsetWidth - btn.offsetWidth) / 2;
     container.scrollLeft = Math.max(0, target);
   }
 
@@ -832,9 +784,9 @@ function previewToolHighlight(t) {
     if (r.right < 0 || r.left > window.innerWidth) return;
 
     const ghost = ensureGhost();
-    ghost.textContent = btn.textContent;
-    ghost.className   = btn.className + ' orb-preview-ghost-active';
-    ghost.style.left   = (r.left + r.width / 2) + 'px';
+    ghost.textContent  = btn.textContent;
+    ghost.className    = btn.className + ' orb-preview-ghost-active';
+    ghost.style.left   = (r.left + r.width  / 2) + 'px';
     ghost.style.top    = (r.top  + r.height / 2) + 'px';
     ghost.style.width  = r.width  + 'px';
     ghost.style.height = r.height + 'px';
@@ -843,10 +795,7 @@ function previewToolHighlight(t) {
 
 function clearPreviewHighlight() {
   document.querySelectorAll('.orb-preview').forEach(b => b.classList.remove('orb-preview'));
-  if (orbGhost) {
-    orbGhost.className = '';
-    orbGhost.textContent = '';
-  }
+  if (orbGhost) { orbGhost.className = ''; orbGhost.textContent = ''; }
 }
 
 // ═══════════════════════════════════════════════════
@@ -865,11 +814,12 @@ function hideOrbNow() {
   orb.classList.remove('orb-visible');
   orb.classList.remove('orb-tool-active');
   orb.classList.remove('orb-color-mode');
-  orb.classList.remove('orb-stroke-mode'); // ★ NEW
+  orb.classList.remove('orb-stroke-mode');
   clearPreviewHighlight();
   clearColorHighlight();
-  clearStrokeHighlight(); // ★ NEW
+  clearStrokeHighlight();
   highlightColorBar(false);
+  stopOrbFollow();
 }
 
 function cancelLongPress() {
@@ -899,27 +849,24 @@ function updateLabel(t) {
 }
 
 // ═══════════════════════════════════════════════════
-//  위치 (고정) — ★ MODIFIED: 원형 경계 적용
+//  위치
 // ═══════════════════════════════════════════════════
 
 function applyPosition() {
   if (!orb) return;
   const half = ORB_SIZE / 2;
   orb.style.transform = `translate(${orbX - half}px, ${orbY - half}px)`;
-  enforceCircleBoundary(); // ★ NEW
 }
 
 // ═══════════════════════════════════════════════════
 //  색상 선택 헬퍼
 // ═══════════════════════════════════════════════════
 
-let colorDots = null;
+let colorDots    = null;
 let colorBaseIdx = 0;
 
 function getColorDots() {
-  if (!colorDots) {
-    colorDots = [...document.querySelectorAll('#color-tray .cdot')];
-  }
+  if (!colorDots) colorDots = [...document.querySelectorAll('#color-tray .cdot')];
   return colorDots;
 }
 
@@ -934,7 +881,6 @@ function selectColorByStep(step) {
   }
 
   const idx = Math.max(0, Math.min(colorBaseIdx + step, dots.length - 1));
-
   clearColorHighlight();
   dots[idx].classList.add('cdot-orb-highlight');
 
@@ -944,25 +890,20 @@ function selectColorByStep(step) {
     if (navigator.vibrate) navigator.vibrate(8);
 
     if (orb && orbLabel) {
-      const color = dots[idx].dataset.c;
-      orbLabel.style.color = color;
+      orbLabel.style.color = dots[idx].dataset.c;
       orbLabel.textContent = '●';
     }
   }
 }
 
 function clearColorHighlight() {
-  const dots = getColorDots();
-  dots.forEach(d => d.classList.remove('cdot-orb-highlight'));
+  getColorDots().forEach(d => d.classList.remove('cdot-orb-highlight'));
   if (orbLabel) orbLabel.style.color = '';
 }
 
 function highlightColorBar(show) {
   const cb = document.getElementById('color-tray');
   if (!cb) return;
-  if (show) {
-    cb.classList.add('ct-visible', 'cb-orb-highlight');
-  } else {
-    cb.classList.remove('cb-orb-highlight');
-  }
+  if (show) cb.classList.add('ct-visible', 'cb-orb-highlight');
+  else      cb.classList.remove('cb-orb-highlight');
 }
