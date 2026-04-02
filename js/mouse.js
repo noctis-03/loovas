@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════
 //  mouse.js — 마우스 이벤트 핸들링
 //
-//  UPDATE: orbLock → isOrbLocked() 함수 호출로 변경
+//  ★ MODIFIED: startDraw에 화면 좌표 전달 (오버레이 레이어 판단용)
 // ═══════════════════════════════════════════════════
 
 import * as S from './state.js';
@@ -44,7 +44,7 @@ export function initMouseEvents() {
 
     const bp = s2b(e.clientX, e.clientY);
 
-    if (S.tool === 'pen' || S.tool === 'highlight') { startDraw(bp); return; }
+    if (S.tool === 'pen' || S.tool === 'highlight') { startDraw(bp, e.clientX, e.clientY); return; } // ★ MODIFIED
     if (S.tool === 'eraser') { S.setDrawing(true); eraseAt(bp); return; }
     if (S.tool === 'rect' || S.tool === 'circle' || S.tool === 'arrow') { S.setDrawing(true); S.setShapeA(bp); return; }
     if (S.tool === 'text') { addText(bp); pushState(); return; }
