@@ -1,15 +1,31 @@
 // ═══════════════════════════════════════════════════
 //  transform.js — 팬/줌 변환, 좌표 변환, 그리드
+//
+//  FIX: layout.js에서 updateMinimap 직접 import 대신
+//       지연 호출로 순환 참조 안전하게 처리
 // ═══════════════════════════════════════════════════
 
 import { T, vp, board, gridOn, setGridOn } from './state.js';
-import { updateMinimap } from './layout.js';
+
+// 순환 참조 안전: layout.js의 updateMinimap을 지연 import
+let _updateMinimap = null;
+
+function getUpdateMinimap() {
+  if (!_updateMinimap) {
+    import('./layout.js').then(mod => {
+      _updateMinimap = mod.updateMinimap;
+    });
+  }
+  return _updateMinimap;
+}
 
 export function applyT() {
   board.style.transform = `translate(${T.x}px,${T.y}px) scale(${T.s})`;
   document.getElementById('zoom-pill').textContent = Math.round(T.s * 100) + '%';
   updateGrid();
-  updateMinimap();
+  // 지연 호출로 순환 참조 안전하게 처리
+  const fn = getUpdateMinimap();
+  if (fn) fn();
 }
 
 export function getVpRect() {
@@ -45,4 +61,9 @@ export function updateGrid() {
 export function toggleGrid() {
   setGridOn(!gridOn);
   updateGrid();
+}
+
+/** layout.js 초기화 후 직접 등록 (순환 참조 해결) */
+export function registerUpdateMinimap(fn) {
+  _updateMinimap = fn;
 }
