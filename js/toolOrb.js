@@ -143,14 +143,14 @@ export function deactivateByTap() {
 
 /** 그리기 완료 후 */
 export function scheduleRevertAfterUse() {
-  if (!pendingTool || !_toolActivated) return;
-  scheduleHide(HIDE_DELAY_USE);
+//  if (!pendingTool || !_toolActivated) return;
+//  scheduleHide(HIDE_DELAY_USE);
 }
 
 /** 도형 무시 시 revert 보장 */
 export function ensureRevertIfNeeded() {
-  if (pendingTool && _toolActivated) {
-    scheduleHide(HIDE_DELAY_USE);
+//  if (pendingTool && _toolActivated) {
+//    scheduleHide(HIDE_DELAY_USE);
   }
 }
 
