@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════
 //  drawing.js — 펜/형광펜/도형 그리기 & 지우개
 //
-//  UPDATE: 스트로크/도형 확정, 지우개 사용 후 pushState() 호출
+//  ★ MODIFIED: 포스트잇/카드 위에서 그릴 때 오버레이 레이어 사용
 // ═══════════════════════════════════════════════════
 
 import * as S from './state.js';
@@ -10,7 +10,32 @@ import { mkSvg, setAttrs, pts2path, smoothPts, buildTaperOutlinePath } from './s
 import { updateMinimap } from './layout.js';
 import { pushState } from './history.js';
 
-export function startDraw(bp) {
+// ★ NEW: 현재 그리기 대상 레이어 결정
+function getDrawLayer() {
+  return S.drawingOnOverlay ? S.svgOverlay : S.svgl;
+}
+
+// ★ NEW: 터치/마우스 좌표에 포스트잇/카드가 있는지 확인
+export function checkOverElement(screenX, screenY) {
+  const el = document.elementFromPoint(screenX, screenY);
+  if (el) {
+    const elContainer = el.closest('.el');
+    if (elContainer) {
+      S.setDrawingOnOverlay(true);
+      return;
+    }
+  }
+  S.setDrawingOnOverlay(false);
+}
+
+export function startDraw(bp, screenX, screenY) {
+  // ★ MODIFIED: 오버레이 확인
+  if (screenX !== undefined && screenY !== undefined) {
+    checkOverElement(screenX, screenY);
+  } else {
+    S.setDrawingOnOverlay(false);
+  }
+
   S.setDrawing(true);
   S.setDrawPts([bp]);
   const livePth = mkSvg('path');
@@ -21,7 +46,9 @@ export function startDraw(bp) {
   livePth.setAttribute('stroke-width', S.tool === 'highlight' ? S.sw * 4 : S.sw);
   livePth.setAttribute('stroke-linecap', S.penCfg.cap || 'round');
   livePth.setAttribute('stroke-linejoin', 'round');
-  S.svgl.appendChild(livePth);
+
+  const layer = getDrawLayer(); // ★ MODIFIED
+  layer.appendChild(livePth);
   S.setLivePth(livePth);
 }
 
@@ -32,10 +59,13 @@ export function continueDraw(bp) {
 
 export function commitFreehandStroke() {
   const pts = S.drawPts;
+  const layer = getDrawLayer(); // ★ MODIFIED
+
   if (pts.length <= 1) {
-    if (S.livePth && S.livePth.parentNode) S.svgl.removeChild(S.livePth);
+    if (S.livePth && S.livePth.parentNode) S.livePth.parentNode.removeChild(S.livePth);
     S.setLivePth(null);
     S.setDrawPts([]);
+    S.setDrawingOnOverlay(false);
     return;
   }
 
@@ -53,10 +83,10 @@ export function commitFreehandStroke() {
       kind: 'taper-path',
       attrs: { d: buildTaperOutlinePath(smoothed, Math.max(1, baseW), S.penCfg.pressure), fill: col, 'fill-opacity': opacity, stroke: 'none' }
     };
-    if (finalEl && finalEl.parentNode) S.svgl.removeChild(finalEl);
+    if (finalEl && finalEl.parentNode) finalEl.parentNode.removeChild(finalEl);
     finalEl = mkSvg('path');
     setAttrs(finalEl, spec.attrs);
-    S.svgl.appendChild(finalEl);
+    layer.appendChild(finalEl);
   } else {
     spec = {
       kind: 'path',
@@ -65,9 +95,10 @@ export function commitFreehandStroke() {
     if (finalEl) setAttrs(finalEl, spec.attrs);
   }
 
-  S.pushStroke({ kind: spec.kind, attrs: spec.attrs, svgEl: finalEl });
+  S.pushStroke({ kind: spec.kind, attrs: spec.attrs, svgEl: finalEl, overlay: S.drawingOnOverlay }); // ★ overlay 플래그 저장
   S.setLivePth(null);
   S.setDrawPts([]);
+  S.setDrawingOnOverlay(false);
   pushState();
 }
 
@@ -135,11 +166,12 @@ let eraseOccurred = false;
 
 export function eraseAt(bp) {
   const r = 18 / S.T.s;
+  // 기본 레이어와 오버레이 레이어 모두 검사
   for (let i = S.strokes.length - 1; i >= 0; i--) {
     try {
       const bb = S.strokes[i].svgEl.getBBox();
       if (bp.x >= bb.x - r && bp.x <= bb.x + bb.width + r && bp.y >= bb.y - r && bp.y <= bb.y + bb.height + r) {
-        S.svgl.removeChild(S.strokes[i].svgEl);
+        S.strokes[i].svgEl.parentNode.removeChild(S.strokes[i].svgEl); // ★ MODIFIED: parentNode 사용
         S.removeStroke(i);
         eraseOccurred = true;
       }
@@ -147,7 +179,7 @@ export function eraseAt(bp) {
   }
 }
 
-/** 지우개 동작이 끝났을 때 호출 — mouse.js / touch.js 에서 사용 */
+/** 지우개 동작이 끝났을 때 호출 */
 export function commitErase() {
   if (eraseOccurred) {
     pushState();
