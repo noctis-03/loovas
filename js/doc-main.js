@@ -1374,8 +1374,16 @@ function getCurrentVisiblePageIdx() {
 function openCtxMenu(idx, cx, cy) {
   ctxTargetIdx = idx;
   pageCtxMenu.classList.add('open');
-  pageCtxMenu.style.left = Math.min(cx, window.innerWidth  - 208) + 'px';
-  pageCtxMenu.style.top  = Math.min(cy, window.innerHeight - 240) + 'px';
+  if (BP.isMobile()) {
+    // 모바일: CSS가 바텀시트로 처리 (left/top 무시)
+    pageCtxMenu.style.left = '';
+    pageCtxMenu.style.top  = '';
+  } else {
+    // 태블릿/데스크탑: 일반 위치 지정
+    const menuW = 210, menuH = 280;
+    pageCtxMenu.style.left = Math.min(cx, window.innerWidth  - menuW) + 'px';
+    pageCtxMenu.style.top  = Math.min(cy, window.innerHeight - menuH) + 'px';
+  }
 }
 function closeCtxMenu() {
   pageCtxMenu.classList.remove('open');
@@ -1567,13 +1575,154 @@ function initCtxMenu() {
 }
 
 /* ══════════════════════════════════════════════════
-   사이드바 토글
+   반응형 유틸 — 브레이크포인트
+══════════════════════════════════════════════════ */
+const BP = {
+  isMobile:  () => window.innerWidth < 600,
+  isTablet:  () => window.innerWidth >= 600 && window.innerWidth < 1024,
+  isDesktop: () => window.innerWidth >= 1024,
+};
+
+/* ══════════════════════════════════════════════════
+   사이드바 토글 (반응형)
 ══════════════════════════════════════════════════ */
 function initSidebarToggle() {
   const sidebar = document.getElementById('sidebar');
-  document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
-    sidebar.classList.toggle('collapsed');
-  });
+  const dim     = document.getElementById('sidebar-dim');
+  if (!sidebar) return;
+
+  function closeSidebar() {
+    if (BP.isDesktop()) {
+      sidebar.classList.add('collapsed');
+    } else {
+      sidebar.classList.remove('open');
+    }
+    requestAnimationFrame(_updateModeBarPosition);
+  }
+
+  function openSidebar() {
+    if (BP.isDesktop()) {
+      sidebar.classList.remove('collapsed');
+    } else {
+      sidebar.classList.add('open');
+    }
+    requestAnimationFrame(_updateModeBarPosition);
+  }
+
+  function toggleSidebar() {
+    if (BP.isDesktop()) {
+      sidebar.classList.toggle('collapsed');
+    } else {
+      sidebar.classList.toggle('open');
+    }
+    requestAnimationFrame(_updateModeBarPosition);
+  }
+
+  // 헤더 토글 버튼
+  document.getElementById('sidebar-toggle-btn')?.addEventListener('click', toggleSidebar);
+
+  // 사이드바 내 닫기 버튼 (모바일/태블릿)
+  document.getElementById('sidebar-close-btn')?.addEventListener('click', closeSidebar);
+
+  // 딤 영역 클릭 → 닫기
+  dim?.addEventListener('click', closeSidebar);
+
+  // 리사이즈: 브레이크포인트 변경 + 모드바 위치 갱신
+  let _prevDesktop = BP.isDesktop();
+  window.addEventListener('resize', () => {
+    const nowDesktop = BP.isDesktop();
+    if (nowDesktop !== _prevDesktop) {
+      if (nowDesktop) {
+        // 모바일/태블릿→데스크탑: 오버레이 클래스 제거, 기본 표시
+        sidebar.classList.remove('open');
+        sidebar.classList.remove('collapsed');
+      } else {
+        // 데스크탑→모바일/태블릿: collapsed 제거, 오버레이 숨김
+        sidebar.classList.remove('collapsed');
+        sidebar.classList.remove('open');
+      }
+      _prevDesktop = nowDesktop;
+    }
+    // 모드바는 항상 재조정
+    _updateModeBarPosition();
+  }, { passive: true });
+
+  // 초기 상태: 데스크탑이면 sidebar 기본 표시, 모바일이면 숨김
+  sidebar.classList.remove('open');
+  sidebar.classList.remove('collapsed');
+
+  // 에디터영역 크기 변화 감지 → 모드바 위치 재조정
+  const editorArea = document.getElementById('editor-area');
+  if (editorArea && typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(() => _updateModeBarPosition());
+    ro.observe(editorArea);
+  }
+
+  // 사이드바 스와이프 제스처 (모바일: 왼쪽 엣지 스와이프로 열기)
+  _initSidebarSwipe(sidebar, openSidebar, closeSidebar);
+}
+
+/* ── 사이드바 스와이프 제스처 ── */
+function _initSidebarSwipe(sidebar, openFn, closeFn) {
+  let startX = 0, startY = 0, swipeDx = 0, tracking = false;
+  const EDGE_ZONE = 24;  // 왼쪽 엣지에서 스와이프 시작 감지 범위
+
+  // 전체 화면 엣지 스와이프 → 열기
+  document.addEventListener('touchstart', e => {
+    if (BP.isDesktop()) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    swipeDx = 0;
+    tracking = startX < EDGE_ZONE;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!tracking || BP.isDesktop()) return;
+    swipeDx = e.touches[0].clientX - startX;
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!tracking || BP.isDesktop()) return;
+    if (swipeDx > 50) openFn();
+    tracking = false; swipeDx = 0;
+  }, { passive: true });
+
+  // 사이드바 내부 오른쪽 스와이프 → 닫기
+  sidebar.addEventListener('touchstart', e => {
+    if (BP.isDesktop()) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    swipeDx = 0;
+  }, { passive: true });
+
+  sidebar.addEventListener('touchmove', e => {
+    if (BP.isDesktop()) return;
+    swipeDx = e.touches[0].clientX - startX;
+    // 수직 스크롤이 우선이면 제스처 무시
+    if (Math.abs(e.touches[0].clientY - startY) > Math.abs(swipeDx)) return;
+  }, { passive: true });
+
+  sidebar.addEventListener('touchend', () => {
+    if (BP.isDesktop()) return;
+    if (swipeDx < -50) closeFn();
+  }, { passive: true });
+}
+
+/* ── 모드바 위치 업데이트 (데스크탑에서 사이드바 오프셋 고려) ── */
+function _updateModeBarPosition() {
+  const modeBar = document.getElementById('mode-bar');
+  const sidebar = document.getElementById('sidebar');
+  const editorArea = document.getElementById('editor-area');
+  if (!modeBar) return;
+
+  if (BP.isDesktop() && editorArea) {
+    // editor-area 중앙 기준으로 모드바 배치
+    const rect = editorArea.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    modeBar.style.left = centerX + 'px';
+  } else {
+    modeBar.style.left = '50%';
+  }
 }
 
 /* ══════════════════════════════════════════════════
@@ -1659,6 +1808,8 @@ function init() {
   _updateModeBarUI();
   updateEmptyState();
   updateZoomLabel();
+  // 초기 모드바 위치 설정
+  requestAnimationFrame(_updateModeBarPosition);
 
   console.log('∞ Loovas Document Editor v5.0 — pan/annotate/text/lasso + toolOrb v5 + pinch zoom');
 }
