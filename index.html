@@ -8,369 +8,599 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0f0e0d">
-  <title>∞ Canvas</title>
+  <title>∞ Loovas — 홈</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* ══════════════════════════════════════
+       LOBBY OVERRIDES — 사이드바 없는 전체 캔버스
+    ══════════════════════════════════════ */
+    #grid {
+      left: 0 !important;
+    }
+    #viewport {
+      left: 0 !important;
+    }
+
+    /* ── 로비 창 ── */
+    .lobby-window {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 420px;
+      max-width: calc(100vw - 32px);
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(26,23,20,0.1);
+      border-radius: 20px;
+      box-shadow:
+        0 32px 80px rgba(0,0,0,0.18),
+        0 8px 24px rgba(0,0,0,0.08),
+        0 0 0 1px rgba(255,255,255,0.6) inset;
+      z-index: 2000;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .lobby-header {
+      padding: 28px 28px 20px;
+      border-bottom: 1px solid rgba(26,23,20,0.06);
+      cursor: move;
+    }
+    .lobby-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .lobby-brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: #1a1714;
+      color: rgba(255,255,255,0.92);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .lobby-brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .lobby-brand-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 500;
+      color: #1a1714;
+      letter-spacing: -0.02em;
+    }
+    .lobby-brand-version {
+      font-size: 11px;
+      color: #8a8480;
+      letter-spacing: 0.02em;
+    }
+    .lobby-subtitle {
+      font-size: 13px;
+      color: #8a8480;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+    .lobby-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(26,23,20,0.06);
+      color: #8a8480;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.12s, color 0.12s;
+    }
+    .lobby-close:hover {
+      background: rgba(26,23,20,0.12);
+      color: #1a1714;
+    }
+
+    .lobby-body {
+      padding: 20px 28px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .lobby-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #b8b3ac;
+      margin-bottom: 4px;
+      margin-top: 6px;
+    }
+    .lobby-section-title:first-child { margin-top: 0; }
+
+    /* 런처 카드 버튼 */
+    .launch-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 1.5px solid rgba(26,23,20,0.08);
+      background: rgba(26,23,20,0.02);
+      cursor: pointer;
+      transition: background 0.14s, border-color 0.14s, transform 0.12s, box-shadow 0.14s;
+      text-decoration: none;
+      color: inherit;
+      width: 100%;
+      text-align: left;
+    }
+    .launch-card:hover {
+      background: rgba(26,23,20,0.05);
+      border-color: rgba(26,23,20,0.16);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+    .launch-card:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+    .launch-card.primary {
+      background: #1a1714;
+      border-color: #1a1714;
+      color: rgba(255,255,255,0.92);
+    }
+    .launch-card.primary:hover {
+      background: #2a2520;
+      border-color: #2a2520;
+    }
+
+    .launch-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .launch-card.primary .launch-card-icon {
+      background: rgba(255,255,255,0.1);
+    }
+    .launch-card:not(.primary) .launch-card-icon {
+      background: rgba(26,23,20,0.06);
+    }
+
+    .launch-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .launch-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: inherit;
+      margin-bottom: 2px;
+    }
+    .launch-card-desc {
+      font-size: 12px;
+      opacity: 0.55;
+      font-weight: 400;
+      line-height: 1.4;
+    }
+
+    .launch-card-arrow {
+      opacity: 0.3;
+      flex-shrink: 0;
+      transition: opacity 0.12s, transform 0.12s;
+    }
+    .launch-card:hover .launch-card-arrow {
+      opacity: 0.7;
+      transform: translateX(2px);
+    }
+    .launch-card.primary .launch-card-arrow {
+      opacity: 0.5;
+    }
+    .launch-card.primary:hover .launch-card-arrow {
+      opacity: 0.9;
+    }
+
+    /* 최근 파일 섹션 */
+    .lobby-recent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .lobby-recent-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .lobby-recent-item:hover {
+      background: rgba(26,23,20,0.05);
+    }
+    .lobby-recent-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(26,23,20,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .lobby-recent-name {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      color: #1a1714;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lobby-recent-date {
+      font-size: 11px;
+      color: #b8b3ac;
+      white-space: nowrap;
+    }
+    .lobby-recent-empty {
+      font-size: 12px;
+      color: #b8b3ac;
+      text-align: center;
+      padding: 12px 0;
+    }
+
+    .lobby-divider {
+      height: 1px;
+      background: rgba(26,23,20,0.06);
+      margin: 4px 0;
+    }
+
+    /* 로비 닫힌 상태 — 재오픈 버튼 */
+    #lobby-reopen-btn {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 20px;
+      background: rgba(26,23,20,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: rgba(255,255,255,0.9);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px;
+      cursor: pointer;
+      z-index: 1500;
+      display: none;
+      gap: 6px;
+      align-items: center;
+      transition: background 0.12s, opacity 0.2s;
+    }
+    #lobby-reopen-btn.visible {
+      display: flex;
+    }
+    #lobby-reopen-btn:hover {
+      background: rgba(26,23,20,0.95);
+    }
+
+    /* 워터마크 — 로비 배경 힌트 */
+    .lobby-bg-hint {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: rgba(26,23,20,0.2);
+      pointer-events: none;
+      white-space: nowrap;
+      letter-spacing: 0.06em;
+    }
+
+    /* 드래그 중 커서 */
+    .lobby-window.dragging {
+      cursor: move;
+      transition: none;
+    }
+
+    @media (max-width: 480px) {
+      .lobby-window {
+        width: calc(100vw - 24px);
+        top: auto;
+        bottom: 16px;
+        left: 12px;
+        right: 12px;
+        transform: none;
+      }
+    }
+  </style>
 </head>
-<body data-tool="select">
+<body data-tool="pan">
 
-<!-- ── Canvas Layer ── -->
+<!-- ── 무한캔버스 배경 ── -->
 <div id="grid"></div>
-<canvas id="preview-canvas"></canvas>
-<div id="sel-rect"></div>
-
-<!-- ── Edit Mode Indicators ── -->
-<div id="edit-mode-border"></div>
-<div id="edit-mode-badge">
-  <span class="badge-dot"></span>
-  편집 모드
-</div>
-
-<!-- ── Viewport ── -->
 <div id="viewport">
   <div id="board">
     <svg id="svg-layer"></svg>
-    <svg id="svg-overlay"></svg>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════
-     LEFT SIDEBAR — 메인 툴바
-════════════════════════════════════════ -->
-<aside id="left-sidebar">
-  <!-- Logo / Brand -->
-  <div id="sidebar-brand">
-    <div id="brand-icon">∞</div>
-  </div>
+<!-- ── 로비 창 ── -->
+<div class="lobby-window" id="lobby-win">
+  <button class="lobby-close" id="lobby-close-btn" title="닫기">
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+      <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    </svg>
+  </button>
 
-  <div class="sidebar-divider"></div>
-
-  <!-- Mode Tools -->
-  <div class="sidebar-section" id="mode-section">
-    <button class="sbtn active" id="t-select" data-tip="선택" data-tool="select">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M3 2L13 8L8.5 9.5L6.5 14L3 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-      </svg>
-    </button>
-    <button class="sbtn" id="t-edit" data-tip="편집" data-tool="edit">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M10 3L13 6L6 13H3V10L10 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M8.5 4.5L11.5 7.5" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-    </button>
-    <button class="sbtn" id="t-pan" data-tip="이동" data-tool="pan">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 2V14M2 8H14M5 5L2 8L5 11M11 5L14 8L11 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-  </div>
-
-  <div class="sidebar-divider"></div>
-
-  <!-- Draw Tools -->
-  <div class="sidebar-section">
-    <button class="sbtn" id="t-pen" data-tip="펜 (P)" data-tool-or-panel="pen">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M11 3L13 5L5 13L2 14L3 11L11 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M9.5 4.5L11.5 6.5" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-    </button>
-    <button class="sbtn" id="t-highlight" data-tip="형광펜 (L)" data-tool-or-panel="highlight">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="3" y="5" width="10" height="6" rx="2" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M7 11V14M9 11V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </button>
-    <button class="sbtn" id="t-eraser" data-tip="지우개 (E)" data-tool-or-panel="eraser">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M3 13H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <path d="M9 4L12 7L7 12H4L3 11L8 4H9Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-      </svg>
-    </button>
-  </div>
-
-  <div class="sidebar-divider"></div>
-
-  <!-- Shape / Object Tools -->
-  <div class="sidebar-section">
-    <button class="sbtn" id="t-text" data-tip="텍스트 (T)" data-tool="text">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M3 4H13M8 4V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </button>
-    <button class="sbtn" id="t-rect" data-tip="사각형 (R)" data-tool="rect">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="2.5" y="4.5" width="11" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-    </button>
-    <button class="sbtn" id="t-circle" data-tip="원 (C)" data-tool="circle">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-    </button>
-    <button class="sbtn" id="t-arrow" data-tip="화살표 (A)" data-tool="arrow">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M3 8H13M9 4L13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-    <button class="sbtn" id="t-sticky" data-tip="포스트잇 (S)" data-action="addSticky">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M2 3H14V11L10 14H2V3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M10 11V14L14 11H10Z" fill="currentColor" opacity="0.3"/>
-        <path d="M5 7H11M5 9.5H8.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-      </svg>
-    </button>
-    <button class="sbtn" id="t-card" data-tip="카드 창 (W)" data-action="addCard">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M2 6H14" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
-        <circle cx="5" cy="4" r="0.8" fill="currentColor" opacity="0.5"/>
-        <circle cx="7.5" cy="4" r="0.8" fill="currentColor" opacity="0.5"/>
-        <circle cx="10" cy="4" r="0.8" fill="currentColor" opacity="0.5"/>
-      </svg>
-    </button>
-    <button class="sbtn" data-tip="이미지" data-action="addImage">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-        <circle cx="5.5" cy="6.5" r="1.2" stroke="currentColor" stroke-width="1.2"/>
-        <path d="M1.5 10.5L5 8L7.5 10.5L10.5 7.5L14.5 11" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
-      </svg>
-    </button>
-  </div>
-
-  <div class="sidebar-divider"></div>
-
-  <!-- System -->
-  <div class="sidebar-section">
-    <button class="sbtn" data-tip="그리드 토글 (G)" data-action="toggleGrid">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M2 5.5H14M2 10.5H14M5.5 2V14M10.5 2V14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
-      </svg>
-    </button>
-    <button class="sbtn" data-tip="저장 (Ctrl+S)" data-action="save">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M3 2H11L13 4V13C13 13.6 12.6 14 12 14H4C3.4 14 3 13.6 3 13V2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-        <rect x="5.5" y="2" width="4" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/>
-        <rect x="5" y="9" width="6" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/>
-      </svg>
-    </button>
-    <button class="sbtn" data-tip="불러오기" data-action="load">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M2 5H6L7.5 3H14V13H2V5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M8 7V11M6 9L8 11L10 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-    <button class="sbtn sbtn-danger" data-tip="전체 삭제" data-action="clearAll">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M3 5H13L12 14H4L3 5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M1.5 5H14.5M6 5V3H10V5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M6.5 8V11.5M9.5 8V11.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-      </svg>
-    </button>
-  </div>
-
-  <!-- Spacer -->
-  <div class="sidebar-spacer"></div>
-
-  <!-- Undo / Redo -->
-  <div class="sidebar-section">
-    <button class="sbtn ur-btn" id="t-undo" data-tip="실행 취소 (Ctrl+Z)" data-action="undo">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M3 6L6 3M3 6L6 9M3 6H10C12.2 6 14 7.8 14 10C14 12.2 12.2 14 10 14H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-    <button class="sbtn ur-btn" id="t-redo" data-tip="다시 실행 (Ctrl+Shift+Z)" data-action="redo">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M13 6L10 3M13 6L10 9M13 6H6C3.8 6 2 7.8 2 10C2 12.2 3.8 14 6 14H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-  </div>
-</aside>
-
-<!-- ════════════════════════════════════════
-     TOP BAR — 브랜드 + 줌
-════════════════════════════════════════ -->
-<header id="topbar">
-  <div id="canvas-info">
-    <span id="title-pill">∞ Canvas</span>
-  </div>
-  <div id="topbar-right">
-    <div id="zoom-pill">100%</div>
-  </div>
-</header>
-
-<!-- ════════════════════════════════════════
-     COLOR TRAY — 플로팅 드로잉 팔레트
-════════════════════════════════════════ -->
-<div id="color-tray">
-  <div class="ct-title">색상</div>
-  <div class="ct-colors">
-    <div class="cdot active" style="--c:#1a1714" data-c="#1a1714"></div>
-    <div class="cdot" style="--c:#c84b2f" data-c="#c84b2f"></div>
-    <div class="cdot" style="--c:#2b6cb0" data-c="#2b6cb0"></div>
-    <div class="cdot" style="--c:#2d8a4e" data-c="#2d8a4e"></div>
-    <div class="cdot" style="--c:#7c3d9e" data-c="#7c3d9e"></div>
-    <div class="cdot" style="--c:#e8a320" data-c="#e8a320"></div>
-  </div>
-  <div class="ct-divider"></div>
-  <div class="ct-title">굵기</div>
-  <div class="ct-strokes">
-    <button class="sw-btn active" data-sw="2">
-      <div class="sw-line" style="height:2px"></div>
-    </button>
-    <button class="sw-btn" data-sw="5">
-      <div class="sw-line" style="height:4px"></div>
-    </button>
-    <button class="sw-btn" data-sw="10">
-      <div class="sw-line" style="height:7px"></div>
-    </button>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════
-     MINIMAP
-════════════════════════════════════════ -->
-<canvas id="minimap" width="160" height="100"></canvas>
-
-<!-- ════════════════════════════════════════
-     PEN SETTINGS PANEL
-════════════════════════════════════════ -->
-<div id="pen-panel">
-  <div class="pp-header">
-    <span id="pp-title-txt">펜 설정</span>
-    <button class="pp-x" id="pp-close-btn">
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
-    </button>
-  </div>
-  <div class="pp-body">
-    <div class="pp-sect">
-      <div class="pp-lbl">안정화 (Smoothing)</div>
-      <div class="pp-row">
-        <input type="range" id="pp-smooth" min="0" max="20" step="1" value="0">
-        <span class="pp-num" id="pp-smooth-v">0</span>
-      </div>
-      <div class="pp-chips" id="pp-sc">
-        <button class="pp-chip pp-on" data-smooth="0">없음</button>
-        <button class="pp-chip" data-smooth="5">약간</button>
-        <button class="pp-chip" data-smooth="10">보통</button>
-        <button class="pp-chip" data-smooth="18">강함</button>
+  <div class="lobby-header" id="lobby-drag-handle">
+    <div class="lobby-brand">
+      <div class="lobby-brand-icon">∞</div>
+      <div class="lobby-brand-text">
+        <div class="lobby-brand-name">Loovas</div>
+        <div class="lobby-brand-version">v0.1 · 무한 캔버스</div>
       </div>
     </div>
-    <div class="pp-sect">
-      <div class="pp-lbl">불투명도</div>
-      <div class="pp-row">
-        <input type="range" id="pp-opacity" min="5" max="100" step="5" value="100">
-        <span class="pp-num" id="pp-opacity-v">100%</span>
-      </div>
-    </div>
-    <div class="pp-sect" id="pp-cap-sect">
-      <div class="pp-lbl">선 끝 모양</div>
-      <div class="pp-caps">
-        <button class="pp-cap pp-on" data-cap="round">
-          <svg width="30" height="10"><line x1="5" y1="5" x2="25" y2="5" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>
-          <span>둥글게</span>
-        </button>
-        <button class="pp-cap" data-cap="square">
-          <svg width="30" height="10"><line x1="5" y1="5" x2="25" y2="5" stroke="currentColor" stroke-width="5" stroke-linecap="square"/></svg>
-          <span>각지게</span>
-        </button>
-        <button class="pp-cap" data-cap="butt">
-          <svg width="30" height="10"><line x1="7" y1="5" x2="23" y2="5" stroke="currentColor" stroke-width="5" stroke-linecap="butt"/></svg>
-          <span>짧게</span>
-        </button>
-      </div>
-    </div>
-    <div class="pp-sect" id="pp-pressure-sect">
-      <div class="pp-lbl">끝 처리 (Taper)</div>
-      <div class="pp-chips" id="pp-pc">
-        <button class="pp-chip pp-on" data-pressure="none">없음</button>
-        <button class="pp-chip" data-pressure="start">시작</button>
-        <button class="pp-chip" data-pressure="end">끝</button>
-        <button class="pp-chip" data-pressure="both">양쪽</button>
-      </div>
-    </div>
-    <div class="pp-sect">
-      <div class="pp-lbl">미리보기</div>
-      <div id="pp-preview-wrap">
-        <svg id="pp-preview-svg" viewBox="0 0 200 42" preserveAspectRatio="none">
-          <path id="pp-preview-path"
-            d="M10,30 Q30,10 50,22 Q70,34 90,18 Q110,8 130,22 Q150,34 170,16 Q185,8 192,14"
-            fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round"/>
+    <div class="lobby-subtitle">무엇을 만들어 볼까요?</div>
+  </div>
+
+  <div class="lobby-body">
+    <!-- 주요 런처 -->
+    <div class="lobby-section-title">새로 시작</div>
+
+    <a href="canvas.html" class="launch-card primary">
+      <div class="launch-card-icon">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <path d="M3 11C3 6.58 6.58 3 11 3C15.42 3 19 6.58 19 11C19 15.42 15.42 19 11 19" stroke="rgba(255,255,255,0.9)" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M3 11C3 15.42 6.58 19 11 19" stroke="rgba(255,255,255,0.4)" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="3 3"/>
+          <path d="M11 7V11L14 13" stroke="rgba(255,255,255,0.75)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- 무한 심볼 스케치 -->
+          <path d="M7 11Q8 8 11 11Q14 14 15 11Q14 8 11 11Q8 14 7 11Z" stroke="rgba(255,255,255,0.6)" stroke-width="1.4" fill="none"/>
         </svg>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════
-     CONTEXT MENU
-════════════════════════════════════════ -->
-<div id="ctx">
-  <div class="citem" data-action="front">
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2V10M4 5L7 2L10 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/></svg>
-    맨 앞으로
-  </div>
-  <div class="citem" data-action="back">
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12V4M4 9L7 12L10 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 2H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/></svg>
-    맨 뒤로
-  </div>
-  <div class="cdiv"></div>
-  <div class="citem" data-action="dup">
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4.5" y="1.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="1.5" y="4.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5" fill="currentColor" fill-opacity="0.08"/></svg>
-    복제
-  </div>
-  <div class="cdiv"></div>
-  <div class="citem danger" data-action="del">
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4H12L11 13H3L2 4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M1 4H13M5 4V2H9V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    삭제
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════
-     SNACKBAR
-════════════════════════════════════════ -->
-<div id="snack"></div>
-
-<!-- ════════════════════════════════════════
-     SAVE DIALOG
-════════════════════════════════════════ -->
-<div id="save-overlay">
-  <div id="save-dialog">
-    <div class="save-dialog-header">
-      <div class="save-dialog-title">저장</div>
-      <div class="save-dialog-subtitle">캔버스를 파일로 저장합니다</div>
-    </div>
-    <div class="save-dialog-body">
-      <div class="save-input-row">
-        <label class="save-label" for="save-filename">파일 이름</label>
-        <input type="text" id="save-filename" class="save-input" placeholder="canvas-2026-04-02">
+      <div class="launch-card-info">
+        <div class="launch-card-title">무한 캔버스</div>
+        <div class="launch-card-desc">자유롭게 그리고, 메모하고, 연결하세요</div>
       </div>
-    </div>
-    <div class="save-dialog-actions">
-      <button class="save-btn save-btn-ghost" id="save-cancel-btn">취소</button>
-      <button class="save-btn save-btn-secondary" id="save-as-btn">다른 이름으로</button>
-      <button class="save-btn save-btn-primary" id="save-quick-btn">저장</button>
-    </div>
+      <svg class="launch-card-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+
+    <a href="document.html" class="launch-card">
+      <div class="launch-card-icon">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <rect x="4" y="2" width="14" height="18" rx="2.5" stroke="#1a1714" stroke-width="1.8"/>
+          <path d="M8 7H14M8 10.5H14M8 14H11" stroke="#1a1714" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+          <circle cx="17" cy="17" r="4.5" fill="#f7f5f0" stroke="#1a1714" stroke-width="1.5"/>
+          <path d="M15.5 17H18.5M17 15.5V18.5" stroke="#1a1714" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="launch-card-info">
+        <div class="launch-card-title">문서 캔버스</div>
+        <div class="launch-card-desc">PDF, 이미지를 불러와 주석·편집하세요</div>
+      </div>
+      <svg class="launch-card-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+
+    <!-- 최근 파일 -->
+    <div class="lobby-divider"></div>
+    <div class="lobby-section-title">최근 캔버스</div>
+    <div class="lobby-recent-list" id="lobby-recent"></div>
   </div>
 </div>
 
-<!-- Hidden Inputs -->
-<input type="file" id="img-in"  accept="image/*" style="display:none">
-<input type="file" id="load-in" style="display:none">
+<!-- 닫힌 후 재오픈 버튼 -->
+<button id="lobby-reopen-btn">
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+    <path d="M2 6.5C2 3.99 4.02 2 6.5 2C9 2 11 3.99 11 6.5C11 9.01 9 11 6.5 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M6.5 9L4 11L6.5 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  Loovas 홈
+</button>
 
-<!-- Toolbar drag compatibility shims (legacy refs) -->
-<div id="toolbar" style="display:none" aria-hidden="true">
-  <div id="tb-drag-handle" style="display:none"></div>
-  <div id="tb-tools" style="display:none"></div>
-</div>
-<div id="mode-bar" style="display:none" aria-hidden="true"></div>
-<div id="ur-cluster" style="display:none" aria-hidden="true"></div>
+<!-- 배경 힌트 -->
+<div class="lobby-bg-hint">∞ Loovas · 무한 캔버스 플랫폼</div>
 
-<script type="module" src="js/main.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // ── 최근 파일 렌더링 ──
+  const RECENT_KEY = 'canvas-recent-files';
+
+  function getRecentFiles() {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  function formatDate(isoStr) {
+    try {
+      const d = new Date(isoStr);
+      const now = new Date();
+      const diff = (now - d) / 1000;
+      if (diff < 60) return '방금 전';
+      if (diff < 3600) return Math.floor(diff / 60) + '분 전';
+      if (diff < 86400) return Math.floor(diff / 3600) + '시간 전';
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getMonth()+1}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch { return ''; }
+  }
+
+  function renderRecent() {
+    const container = document.getElementById('lobby-recent');
+    const files = getRecentFiles().slice(0, 5);
+
+    if (files.length === 0) {
+      container.innerHTML = '<div class="lobby-recent-empty">저장된 캔버스가 없습니다</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    files.forEach(file => {
+      const item = document.createElement('div');
+      item.className = 'lobby-recent-item';
+
+      // 타입 판별 (doc_ 접두사)
+      const isDoc = file.name && file.name.startsWith('doc_');
+      item.innerHTML = `
+        <div class="lobby-recent-icon">
+          ${isDoc
+            ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3" y="1.5" width="10" height="13" rx="2" stroke="#8a8480" stroke-width="1.4"/><path d="M5.5 5.5H10.5M5.5 8H10.5M5.5 10.5H8" stroke="#8a8480" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/></svg>`
+            : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8C2 4.68 4.68 2 8 2C11.32 2 14 4.68 14 8C14 11.32 11.32 14 8 14" stroke="#8a8480" stroke-width="1.4" stroke-linecap="round"/><path d="M5 8Q6 5.5 8 8Q10 10.5 11 8Q10 5.5 8 8Q6 10.5 5 8Z" stroke="#8a8480" stroke-width="1.2" fill="none"/></svg>`
+          }
+        </div>
+        <span class="lobby-recent-name">${escapeHtml(file.name)}</span>
+        <span class="lobby-recent-date">${formatDate(file.date)}</span>
+      `;
+
+      item.addEventListener('click', () => {
+        // 타입에 따라 이동
+        const target = isDoc ? 'document.html' : 'canvas.html';
+        sessionStorage.setItem('lobby-open-file', JSON.stringify(file));
+        window.location.href = target + '?restore=' + encodeURIComponent(file.name);
+      });
+
+      container.appendChild(item);
+    });
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // ── 드래그 ──
+  function initDrag(win, handle) {
+    let drag = null;
+    let curLeft = null, curTop = null;
+
+    function getPos() {
+      const r = win.getBoundingClientRect();
+      return { left: r.left, top: r.top };
+    }
+
+    handle.addEventListener('mousedown', e => {
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+      const pos = getPos();
+      drag = { ox: e.clientX - pos.left, oy: e.clientY - pos.top };
+      win.classList.add('dragging');
+      // 이미 fixed이므로 %를 px로 전환
+      win.style.transform = 'none';
+      win.style.left = pos.left + 'px';
+      win.style.top = pos.top + 'px';
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', e => {
+      if (!drag) return;
+      const x = Math.max(0, Math.min(e.clientX - drag.ox, window.innerWidth - win.offsetWidth));
+      const y = Math.max(0, Math.min(e.clientY - drag.oy, window.innerHeight - win.offsetHeight));
+      win.style.left = x + 'px';
+      win.style.top = y + 'px';
+    });
+    window.addEventListener('mouseup', () => {
+      drag = null;
+      win.classList.remove('dragging');
+    });
+  }
+
+  // ── 무한캔버스 배경 팬 ──
+  let panX = 0, panY = 0, panActive = false, panStart = null;
+  const board = document.getElementById('board');
+
+  function applyPan() {
+    board.style.transform = `translate(${panX}px, ${panY}px)`;
+  }
+
+  document.addEventListener('mousedown', e => {
+    if (e.target.closest('.lobby-window') || e.target.closest('#lobby-reopen-btn')) return;
+    panActive = true;
+    panStart = { x: e.clientX - panX, y: e.clientY - panY };
+    document.body.style.cursor = 'grabbing';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!panActive) return;
+    panX = e.clientX - panStart.x;
+    panY = e.clientY - panStart.y;
+    applyPan();
+  });
+  document.addEventListener('mouseup', () => {
+    panActive = false;
+    document.body.style.cursor = '';
+  });
+
+  // 터치 팬
+  let touchPanStart = null;
+  document.addEventListener('touchstart', e => {
+    if (e.target.closest('.lobby-window') || e.target.closest('#lobby-reopen-btn')) return;
+    if (e.touches.length !== 1) return;
+    touchPanStart = { x: e.touches[0].clientX - panX, y: e.touches[0].clientY - panY };
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!touchPanStart || e.touches.length !== 1) return;
+    panX = e.touches[0].clientX - touchPanStart.x;
+    panY = e.touches[0].clientY - touchPanStart.y;
+    applyPan();
+  }, { passive: true });
+  document.addEventListener('touchend', () => { touchPanStart = null; });
+
+  // ── 닫기 / 재오픈 ──
+  const lobbyWin = document.getElementById('lobby-win');
+  const closeBtn = document.getElementById('lobby-close-btn');
+  const reopenBtn = document.getElementById('lobby-reopen-btn');
+
+  closeBtn.addEventListener('click', () => {
+    lobbyWin.style.opacity = '0';
+    lobbyWin.style.transform = 'translate(-50%, -50%) scale(0.96)';
+    lobbyWin.style.pointerEvents = 'none';
+    lobbyWin.style.transition = 'opacity 0.2s, transform 0.2s';
+    setTimeout(() => { lobbyWin.style.display = 'none'; }, 200);
+    reopenBtn.classList.add('visible');
+  });
+
+  reopenBtn.addEventListener('click', () => {
+    lobbyWin.style.display = '';
+    lobbyWin.style.pointerEvents = '';
+    // 재등장 애니메이션
+    lobbyWin.style.opacity = '0';
+    lobbyWin.style.transform = 'translate(-50%, -50%) scale(0.96)';
+    requestAnimationFrame(() => {
+      lobbyWin.style.transition = 'opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out)';
+      lobbyWin.style.opacity = '1';
+      lobbyWin.style.transform = 'translate(-50%, -50%) scale(1)';
+    });
+    reopenBtn.classList.remove('visible');
+    renderRecent();
+  });
+
+  // ── 초기화 ──
+  initDrag(lobbyWin, document.getElementById('lobby-drag-handle'));
+  renderRecent();
+})();
+</script>
 </body>
 </html>

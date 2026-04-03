@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f0e0d">
+  <title>∞ Loovas — 문서 캔버스</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ═══════════════════════════════════════════════════
+       DOCUMENT CANVAS — 추가 스타일
+    ═══════════════════════════════════════════════════ */
+
+    /* 배경: 무한캔버스와 동일한 도트그리드 */
+    #doc-grid {
+      position: fixed;
+      inset: 0;
+      left: var(--sidebar-w);
+      pointer-events: none;
+      z-index: 0;
+      background-color: var(--canvas-bg);
+      background-image: radial-gradient(circle, var(--canvas-dot) 1.4px, transparent 1.4px);
+      background-size: 28px 28px;
+    }
+
+    /* 뷰포트 */
+    #doc-viewport {
+      position: fixed;
+      top: 0; bottom: 0;
+      left: var(--sidebar-w);
+      right: 0;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    /* 보드 — 스크롤 가능한 페이지들 */
+    #doc-board {
+      position: absolute;
+      top: 0; left: 0;
+      transform-origin: 0 0;
+      will-change: transform;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 80px 120px;
+      gap: 32px;
+      min-width: 100vw;
+      min-height: 100vh;
+    }
+
+    /* 각 문서 페이지 래퍼 */
+    .doc-page-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    /* 페이지 섬네일 */
+    .doc-page {
+      position: relative;
+      background: #fff;
+      box-shadow:
+        0 4px 32px rgba(0,0,0,0.13),
+        0 1px 6px rgba(0,0,0,0.06),
+        0 0 0 1px rgba(0,0,0,0.05);
+      border-radius: 3px;
+      overflow: hidden;
+      display: block;
+    }
+    .doc-page canvas {
+      display: block;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* 페이지 번호 뱃지 */
+    .doc-page-badge {
+      font-size: 10px;
+      color: var(--ink-4);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      pointer-events: none;
+      letter-spacing: 0.04em;
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    /* 페이지 컨텍스트 메뉴 버튼 */
+    .doc-page-menu-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(26,23,20,0.55);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.9);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      transition: background 0.12s;
+    }
+    .doc-page-wrap:hover .doc-page-menu-btn { display: flex; }
+    .doc-page-menu-btn:hover { background: rgba(26,23,20,0.8); }
+
+    /* 페이지 추가 버튼 (각 페이지 아래) */
+    .doc-add-page-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      border-radius: 99px;
+      border: 1.5px dashed rgba(26,23,20,0.2);
+      background: transparent;
+      color: var(--ink-4);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      font-family: var(--font-ui);
+      margin-top: 4px;
+    }
+    .doc-add-page-btn:hover {
+      border-color: rgba(26,23,20,0.4);
+      color: var(--ink-2);
+      background: rgba(26,23,20,0.04);
+    }
+
+    /* SVG 주석 레이어 (보드 전체 위) */
+    #doc-svg-layer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 1px; height: 1px;
+      overflow: visible;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* 빈 보드 힌트 */
+    #doc-empty-hint {
+      position: fixed;
+      top: 50%;
+      left: calc(var(--sidebar-w) + 50%);
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 5;
+      transition: opacity 0.3s, visibility 0.3s;
+    }
+    #doc-empty-hint.hidden {
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+    }
+    .hint-icon { margin-bottom: 16px; opacity: 0.2; }
+    .hint-title {
+      font-size: 17px; font-weight: 600;
+      color: var(--ink-3); margin-bottom: 8px;
+    }
+    .hint-desc {
+      font-size: 13px; color: var(--ink-4);
+      line-height: 1.7;
+    }
+    .hint-actions {
+      display: flex; gap: 8px; justify-content: center;
+      margin-top: 20px; pointer-events: all;
+    }
+    .hint-btn {
+      padding: 9px 18px;
+      border-radius: 99px;
+      font-size: 12px; font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+      font-family: var(--font-ui);
+      border: 1.5px solid rgba(26,23,20,0.14);
+      background: rgba(255,255,255,0.8);
+      color: var(--ink-2);
+      backdrop-filter: blur(8px);
+    }
+    .hint-btn:hover { background: #fff; border-color: rgba(26,23,20,0.25); }
+    .hint-btn.primary {
+      background: var(--ink-1); color: #fff; border-color: var(--ink-1);
+    }
+    .hint-btn.primary:hover { background: #2a2520; border-color: #2a2520; }
+
+    /* ── TOP BAR ── */
+    #doc-topbar {
+      position: fixed; top: 0;
+      left: var(--sidebar-w); right: 0;
+      height: 44px; z-index: 900;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; pointer-events: none;
+    }
+    #doc-topbar > * { pointer-events: all; }
+
+    #doc-title-pill {
+      font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+      color: var(--ink-3); padding: 5px 12px;
+      background: rgba(26,23,20,0.05);
+      border: 1px solid rgba(26,23,20,0.07);
+      border-radius: 999px;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      display: flex; align-items: center; gap: 6px;
+    }
+    #doc-title-pill svg { opacity: 0.4; }
+
+    #doc-topbar-right { display: flex; align-items: center; gap: 8px; }
+
+    #doc-zoom-pill {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+      color: var(--ink-2); padding: 5px 12px;
+      background: rgba(255,255,255,0.75);
+      border: 1px solid rgba(26,23,20,0.1);
+      border-radius: 999px; cursor: pointer; min-width: 60px; text-align: center;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      transition: background 0.12s; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    #doc-zoom-pill:hover { background: rgba(255,255,255,0.95); color: var(--ink-1); }
+
+    #doc-page-count-pill {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+      color: var(--ink-3); padding: 5px 10px;
+      background: rgba(26,23,20,0.05);
+      border: 1px solid rgba(26,23,20,0.07);
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+    }
+
+    /* ── COLOR TRAY (무한캔버스와 동일) ── */
+    #doc-color-tray {
+      position: fixed;
+      left: calc(var(--sidebar-w) + 12px);
+      bottom: 20px;
+      z-index: 1000;
+      background: rgba(17,17,16,0.92);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px; padding: 12px;
+      display: none; flex-direction: column; gap: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.15);
+      opacity: 0; transform: translateY(8px) scale(0.97);
+      pointer-events: none;
+      transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+    }
+    #doc-color-tray.ct-visible {
+      display: flex; opacity: 1; transform: none; pointer-events: all;
+    }
+
+    /* ── SNACKBAR ── */
+    #doc-snack {
+      position: fixed; bottom: 24px; left: calc(var(--sidebar-w) + 50%);
+      transform: translateX(-50%) translateY(16px);
+      background: rgba(26,23,20,0.9); color: #fff;
+      font-size: 13px; font-family: var(--font-ui);
+      padding: 10px 20px; border-radius: 99px;
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 9000; white-space: nowrap;
+      backdrop-filter: blur(8px);
+    }
+    #doc-snack.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── 페이지 컨텍스트 메뉴 ── */
+    #doc-page-ctx {
+      position: fixed;
+      background: rgba(255,255,255,0.97);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(26,23,20,0.1);
+      border-radius: 12px; padding: 6px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06);
+      z-index: 5000; min-width: 172px;
+      display: none;
+    }
+    #doc-page-ctx.visible { display: block; }
+    .dpc-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 8px;
+      font-size: 13px; color: var(--ink-1); cursor: pointer;
+      transition: background 0.1s; user-select: none;
+    }
+    .dpc-item:hover { background: rgba(26,23,20,0.05); }
+    .dpc-item.danger { color: var(--accent); }
+    .dpc-item.danger:hover { background: rgba(200,75,47,0.06); }
+    .dpc-sep { height: 1px; background: rgba(26,23,20,0.07); margin: 4px 0; }
+
+    /* ── 펜 설정 패널 (무한캔버스와 동일) ── */
+    #doc-pen-panel {
+      position: fixed;
+      width: 228px;
+      background: rgba(22,20,18,0.97);
+      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px; padding: 0;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.2);
+      z-index: 2000;
+      display: none;
+      opacity: 0;
+      transform: scale(0.95) translateY(-4px);
+      transform-origin: left center;
+      transition: opacity 0.18s var(--ease-out), transform 0.18s var(--ease-out);
+    }
+    #doc-pen-panel.pp-open {
+      display: block; opacity: 1; transform: scale(1) translateY(0);
+    }
+    #doc-pen-panel .pp-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    #doc-pen-panel .pp-title {
+      font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.85);
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    #doc-pen-panel .pp-close {
+      width: 24px; height: 24px; border-radius: 50%;
+      border: none; background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.5); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.12s;
+    }
+    #doc-pen-panel .pp-close:hover { background: rgba(255,255,255,0.14); color: #fff; }
+    #doc-pen-panel .pp-body { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
+    #doc-pen-panel .pp-sect { display: flex; flex-direction: column; gap: 8px; }
+    #doc-pen-panel .pp-lbl {
+      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.35);
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    #doc-pen-panel .pp-row { display: flex; align-items: center; gap: 8px; }
+    #doc-pen-panel input[type=range] {
+      flex: 1; height: 4px; border-radius: 2px; cursor: pointer;
+      -webkit-appearance: none; background: rgba(255,255,255,0.12);
+      outline: none;
+    }
+    #doc-pen-panel input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: #fff; cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    #doc-pen-panel .pp-num {
+      font-family: var(--font-mono); font-size: 11px;
+      color: rgba(255,255,255,0.5); min-width: 32px; text-align: right;
+    }
+    #doc-pen-panel .pp-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+    #doc-pen-panel .pp-chip {
+      padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 500;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: transparent; color: rgba(255,255,255,0.5);
+      cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    #doc-pen-panel .pp-chip.pp-on,
+    #doc-pen-panel .pp-chip:hover {
+      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.9);
+      border-color: rgba(255,255,255,0.25);
+    }
+    #doc-pen-panel .pp-caps { display: flex; gap: 4px; }
+    #doc-pen-panel .pp-cap {
+      flex: 1; padding: 6px 4px; border-radius: 8px; font-size: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: rgba(255,255,255,0.5);
+      cursor: pointer; display: flex; flex-direction: column;
+      align-items: center; gap: 4px; transition: 0.12s;
+    }
+    #doc-pen-panel .pp-cap.pp-on,
+    #doc-pen-panel .pp-cap:hover {
+      background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9);
+      border-color: rgba(255,255,255,0.22);
+    }
+    #doc-pen-panel .pp-preview-wrap {
+      background: rgba(255,255,255,0.06); border-radius: 8px; padding: 8px;
+      height: 48px; display: flex; align-items: center;
+    }
+    #doc-pen-panel #dpp-preview-svg { width: 100%; height: 32px; }
+    #doc-pen-panel #dpp-preview-path { stroke: rgba(255,255,255,0.7); }
+
+    /* ── select 도구 선택 스타일 ── */
+    .doc-el-selected {
+      outline: 2px solid var(--accent) !important;
+      outline-offset: 2px;
+    }
+
+    /* ── 드래그 드롭 오버레이 ── */
+    #doc-drag-overlay {
+      position: fixed; inset: 0; z-index: 9998;
+      background: rgba(43,108,176,0.06);
+      border: 3px dashed rgba(43,108,176,0.35);
+      display: none; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    #doc-drag-overlay.active { display: flex; }
+    #doc-drag-overlay .drop-msg {
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(12px);
+      padding: 20px 40px; border-radius: 16px;
+      font-size: 15px; font-weight: 600; color: var(--ink-2);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+
+    /* ── 미니맵 ── */
+    #doc-minimap {
+      position: fixed; right: 16px; bottom: 20px;
+      width: 160px; height: 100px;
+      background: rgba(255,255,255,0.85);
+      border: 1px solid rgba(26,23,20,0.1);
+      border-radius: 10px; overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      z-index: 999;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    @media (max-width: 767px) {
+      #doc-minimap { display: none; }
+      #doc-title-pill { display: none; }
+    }
+  </style>
+</head>
+<body data-tool="pan">
+
+<!-- ── 도트그리드 배경 (무한캔버스와 동일) ── -->
+<div id="doc-grid"></div>
+
+<!-- ── 뷰포트 + 보드 ── -->
+<div id="doc-viewport">
+  <div id="doc-board">
+    <!-- 페이지들은 JS로 주입 -->
+    <svg id="doc-svg-layer"></svg>
+  </div>
+</div>
+
+<!-- ── 빈 상태 힌트 ── -->
+<div id="doc-empty-hint">
+  <div class="hint-icon">
+    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+      <rect x="10" y="6" width="36" height="44" rx="3" stroke="#1a1714" stroke-width="2"/>
+      <path d="M18 18H38M18 25H38M18 32H30" stroke="#1a1714" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="40" cy="40" r="12" fill="var(--canvas-bg)" stroke="#1a1714" stroke-width="2"/>
+      <path d="M36 40H44M40 36V44" stroke="#1a1714" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="hint-title">문서를 불러오세요</div>
+  <div class="hint-desc">
+    PDF, 이미지를 불러와 자유롭게 주석·편집하거나<br>
+    빈 페이지를 추가해 바로 그릴 수 있어요
+  </div>
+  <div class="hint-actions">
+    <button class="hint-btn primary" id="doc-hint-open-btn">파일 열기</button>
+    <button class="hint-btn" id="doc-hint-blank-btn">빈 페이지 추가</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LEFT SIDEBAR — 무한캔버스와 동일 구조
+══════════════════════════════════════════ -->
+<aside id="left-sidebar">
+  <!-- 홈 버튼 -->
+  <div id="sidebar-brand">
+    <a href="index.html" id="brand-icon" title="홈으로" style="text-decoration:none;display:flex;align-items:center;justify-content:center;color:inherit;">∞</a>
+  </div>
+
+  <div class="sidebar-divider"></div>
+
+  <!-- 뷰 / 선택 도구 -->
+  <div class="sidebar-section" id="doc-mode-section">
+    <button class="sbtn active" id="dt-pan" data-tool="pan" data-tip="이동 (H)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2V14M2 8H14M5 5L2 8L5 11M11 5L14 8L11 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="dt-select" data-tool="select" data-tip="선택 (V)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 2L13 8L8.5 9.5L6.5 14L3 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="sidebar-divider"></div>
+
+  <!-- 드로잉 도구 -->
+  <div class="sidebar-section">
+    <button class="sbtn" id="dt-pen" data-tool-or-panel="pen" data-tip="펜 (P)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M11 3L13 5L5 13L2 14L3 11L11 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M9.5 4.5L11.5 6.5" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="dt-highlight" data-tool-or-panel="highlight" data-tip="형광펜 (L)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="3" y="5" width="10" height="6" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M7 11V14M9 11V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="dt-eraser" data-tool-or-panel="eraser" data-tip="지우개 (E)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 13H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M9 4L12 7L7 12H4L3 11L8 4H9Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="sidebar-divider"></div>
+
+  <!-- 도형 도구 -->
+  <div class="sidebar-section">
+    <button class="sbtn" id="dt-text" data-tool="text" data-tip="텍스트 (T)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 4H13M8 4V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="dt-rect" data-tool="rect" data-tip="사각형 (R)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2.5" y="4.5" width="11" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="dt-circle" data-tool="circle" data-tip="원 (C)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="dt-arrow" data-tool="arrow" data-tip="화살표 (A)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 8H13M9 4L13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="dt-sticky" data-action="addSticky" data-tip="포스트잇 (S)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 3H14V11L10 14H2V3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M10 11V14L14 11H10Z" fill="currentColor" opacity="0.3"/>
+        <path d="M5 7H11M5 9.5H8.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="dt-card" data-action="addCard" data-tip="카드 창 (W)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2 6H14" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <circle cx="5" cy="4" r="0.8" fill="currentColor" opacity="0.5"/>
+        <circle cx="7.5" cy="4" r="0.8" fill="currentColor" opacity="0.5"/>
+        <circle cx="10" cy="4" r="0.8" fill="currentColor" opacity="0.5"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="dt-image" data-action="addDocImage" data-tip="이미지 삽입">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="5.5" cy="6.5" r="1.2" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M1.5 10.5L5 8L7.5 10.5L10.5 7.5L14.5 11" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="sidebar-divider"></div>
+
+  <!-- 문서 관리 -->
+  <div class="sidebar-section">
+    <button class="sbtn" id="doc-open-btn" data-tip="문서 열기 (PDF/이미지)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 5H6L7.5 3H14V13H2V5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M8 7V11M6 9L8 11L10 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="doc-add-blank-btn" data-tip="빈 페이지 추가">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="3" y="2" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 6V10M6 8H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="doc-grid-toggle-btn" data-tip="그리드 토글 (G)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 5.5H14M2 10.5H14M5.5 2V14M10.5 2V14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="doc-save-btn" data-tip="저장 (Ctrl+S)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 2H11L13 4V13C13 13.6 12.6 14 12 14H4C3.4 14 3 13.6 3 13V2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        <rect x="5.5" y="2" width="4" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/>
+        <rect x="5" y="9" width="6" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+    </button>
+    <button class="sbtn sbtn-danger" id="doc-clear-btn" data-tip="전체 삭제">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 5H13L12 14H4L3 5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M1.5 5H14.5M6 5V3H10V5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Spacer -->
+  <div class="sidebar-spacer"></div>
+
+  <!-- Undo / Redo -->
+  <div class="sidebar-section">
+    <button class="sbtn" id="doc-undo-btn" data-tip="실행 취소 (Ctrl+Z)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 6L6 3M3 6L6 9M3 6H10C12.2 6 14 7.8 14 10C14 12.2 12.2 14 10 14H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="sbtn" id="doc-redo-btn" data-tip="다시 실행 (Ctrl+Shift+Z)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M13 6L10 3M13 6L10 9M13 6H6C3.8 6 2 7.8 2 10C2 12.2 3.8 14 6 14H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+</aside>
+
+<!-- ── TOP BAR ── -->
+<header id="doc-topbar">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div id="doc-title-pill">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <rect x="1.5" y="0.5" width="9" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+        <path d="M3.5 4H8.5M3.5 6H8.5M3.5 8H6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" opacity="0.6"/>
+      </svg>
+      문서 캔버스
+    </div>
+    <div id="doc-page-count-pill" style="display:none;">1 페이지</div>
+  </div>
+  <div id="doc-topbar-right">
+    <div id="doc-zoom-pill">100%</div>
+  </div>
+</header>
+
+<!-- ── COLOR TRAY ── -->
+<div id="doc-color-tray">
+  <div class="ct-title">색상</div>
+  <div class="ct-colors">
+    <div class="cdot active" style="--c:#1a1714" data-c="#1a1714"></div>
+    <div class="cdot" style="--c:#c84b2f" data-c="#c84b2f"></div>
+    <div class="cdot" style="--c:#2b6cb0" data-c="#2b6cb0"></div>
+    <div class="cdot" style="--c:#2d8a4e" data-c="#2d8a4e"></div>
+    <div class="cdot" style="--c:#7c3d9e" data-c="#7c3d9e"></div>
+    <div class="cdot" style="--c:#e8a320" data-c="#e8a320"></div>
+  </div>
+  <div class="ct-divider"></div>
+  <div class="ct-title">굵기</div>
+  <div class="ct-strokes">
+    <button class="sw-btn active" data-sw="2"><div class="sw-line" style="height:2px"></div></button>
+    <button class="sw-btn" data-sw="5"><div class="sw-line" style="height:4px"></div></button>
+    <button class="sw-btn" data-sw="10"><div class="sw-line" style="height:7px"></div></button>
+  </div>
+</div>
+
+<!-- ── 펜 설정 패널 ── -->
+<div id="doc-pen-panel">
+  <div class="pp-header">
+    <span class="pp-title" id="dpp-title">펜 설정</span>
+    <button class="pp-close" id="dpp-close">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+        <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="pp-body">
+    <div class="pp-sect">
+      <div class="pp-lbl">안정화 (Smoothing)</div>
+      <div class="pp-row">
+        <input type="range" id="dpp-smooth" min="0" max="20" step="1" value="0">
+        <span class="pp-num" id="dpp-smooth-v">0</span>
+      </div>
+      <div class="pp-chips" id="dpp-sc">
+        <button class="pp-chip pp-on" data-smooth="0">없음</button>
+        <button class="pp-chip" data-smooth="5">약간</button>
+        <button class="pp-chip" data-smooth="10">보통</button>
+        <button class="pp-chip" data-smooth="18">강함</button>
+      </div>
+    </div>
+    <div class="pp-sect">
+      <div class="pp-lbl">불투명도</div>
+      <div class="pp-row">
+        <input type="range" id="dpp-opacity" min="5" max="100" step="5" value="100">
+        <span class="pp-num" id="dpp-opacity-v">100%</span>
+      </div>
+    </div>
+    <div class="pp-sect" id="dpp-cap-sect">
+      <div class="pp-lbl">선 끝 모양</div>
+      <div class="pp-caps">
+        <button class="pp-cap pp-on" data-cap="round">
+          <svg width="30" height="10"><line x1="5" y1="5" x2="25" y2="5" stroke="rgba(255,255,255,0.7)" stroke-width="5" stroke-linecap="round"/></svg>
+          <span>둥글게</span>
+        </button>
+        <button class="pp-cap" data-cap="square">
+          <svg width="30" height="10"><line x1="5" y1="5" x2="25" y2="5" stroke="rgba(255,255,255,0.7)" stroke-width="5" stroke-linecap="square"/></svg>
+          <span>각지게</span>
+        </button>
+        <button class="pp-cap" data-cap="butt">
+          <svg width="30" height="10"><line x1="7" y1="5" x2="23" y2="5" stroke="rgba(255,255,255,0.7)" stroke-width="5" stroke-linecap="butt"/></svg>
+          <span>짧게</span>
+        </button>
+      </div>
+    </div>
+    <div class="pp-sect" id="dpp-pressure-sect">
+      <div class="pp-lbl">끝 처리 (Taper)</div>
+      <div class="pp-chips" id="dpp-pc">
+        <button class="pp-chip pp-on" data-pressure="none">없음</button>
+        <button class="pp-chip" data-pressure="start">시작</button>
+        <button class="pp-chip" data-pressure="end">끝</button>
+        <button class="pp-chip" data-pressure="both">양쪽</button>
+      </div>
+    </div>
+    <div class="pp-sect">
+      <div class="pp-lbl">미리보기</div>
+      <div class="pp-preview-wrap">
+        <svg id="dpp-preview-svg" viewBox="0 0 200 32" preserveAspectRatio="none">
+          <path id="dpp-preview-path"
+            d="M10,24 Q30,8 50,16 Q70,24 90,12 Q110,4 130,16 Q150,24 170,10 Q185,4 192,10"
+            fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 페이지 컨텍스트 메뉴 ── -->
+<div id="doc-page-ctx">
+  <div class="dpc-item" id="dpc-move-up">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 11V3M4 6L7 3L10 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    위로 이동
+  </div>
+  <div class="dpc-item" id="dpc-move-down">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 3V11M4 8L7 11L10 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    아래로 이동
+  </div>
+  <div class="dpc-sep"></div>
+  <div class="dpc-item" id="dpc-add-before">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M7 5V9M5 7H9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    앞에 페이지 추가
+  </div>
+  <div class="dpc-item" id="dpc-add-after">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M7 5V9M5 7H9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    뒤에 페이지 추가
+  </div>
+  <div class="dpc-sep"></div>
+  <div class="dpc-item" id="dpc-fit">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5V2H5M9 2H12V5M12 9V12H9M5 12H2V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    이 페이지에 맞추기
+  </div>
+  <div class="dpc-sep"></div>
+  <div class="dpc-item danger" id="dpc-delete">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4H12L11 13H3L2 4Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M1 4H13M5 4V2H9V4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    이 페이지 삭제
+  </div>
+</div>
+
+<!-- ── SNACKBAR ── -->
+<div id="doc-snack"></div>
+
+<!-- ── 저장 다이얼로그 ── -->
+<div id="doc-save-overlay" style="position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;">
+  <div id="doc-save-dialog" style="background:#fff;border-radius:16px;padding:28px 28px 20px;min-width:320px;box-shadow:0 24px 64px rgba(0,0,0,0.25);font-family:var(--font-ui);">
+    <div style="font-size:16px;font-weight:600;color:var(--ink-1);margin-bottom:6px;">저장</div>
+    <div style="font-size:12px;color:var(--ink-4);margin-bottom:20px;">문서 캔버스를 파일로 저장합니다</div>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:11px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">파일 이름</label>
+      <input type="text" id="doc-save-filename" style="width:100%;box-sizing:border-box;border:1px solid rgba(26,23,20,0.18);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font-mono);color:var(--ink-1);outline:none;background:#faf9f7;" placeholder="document-2026-04-03">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button id="doc-save-cancel-btn" style="padding:9px 18px;border-radius:8px;border:1px solid rgba(26,23,20,0.14);background:transparent;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink-2);font-family:var(--font-ui);">취소</button>
+      <button id="doc-save-confirm-btn" style="padding:9px 18px;border-radius:8px;border:none;background:var(--ink-1);color:#fff;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font-ui);">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 미니맵 ── -->
+<canvas id="doc-minimap" width="160" height="100"></canvas>
+
+<!-- ── 드래그 드롭 오버레이 ── -->
+<div id="doc-drag-overlay">
+  <div class="drop-msg">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="display:inline;vertical-align:middle;margin-right:8px;">
+      <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/>
+      <path d="M10 7V13M7 10H13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    </svg>
+    파일을 여기에 놓으세요
+  </div>
+</div>
+
+<!-- ── 파일 입력 ── -->
+<input type="file" id="doc-file-in" accept=".pdf,image/*" style="display:none">
+<input type="file" id="doc-img-in" accept="image/*" style="display:none">
+
+<!-- 기존 무한캔버스 호환용 숨김 shim -->
+<div id="toolbar" style="display:none" aria-hidden="true">
+  <div id="tb-drag-handle" style="display:none"></div>
+  <div id="tb-tools" style="display:none"></div>
+</div>
+<div id="mode-bar" style="display:none" aria-hidden="true"></div>
+<div id="ur-cluster" style="display:none" aria-hidden="true"></div>
+
+<script>
+// 드래그 오버레이
+(function() {
+  let dragCount = 0;
+  const overlay = document.getElementById('doc-drag-overlay');
+  document.addEventListener('dragenter', () => { dragCount++; overlay.classList.add('active'); });
+  document.addEventListener('dragleave', () => { dragCount = Math.max(0, dragCount - 1); if (!dragCount) overlay.classList.remove('active'); });
+  document.addEventListener('drop', () => { dragCount = 0; overlay.classList.remove('active'); });
+  document.addEventListener('dragover', e => e.preventDefault());
+})();
+</script>
+
+<script type="module" src="js/doc-main.js"></script>
+</body>
+</html>
