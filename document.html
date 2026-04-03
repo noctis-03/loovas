@@ -2,916 +2,593 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>문서 — Loovas</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
   <style>
-    /* ════════════════════════════════════════════════
-       RESET & BASE
-    ════════════════════════════════════════════════ */
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
-      --font-ui:   'Inter', system-ui, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+/* ════════════════════════════════════════════════════
+   RESET & TOKENS
+════════════════════════════════════════════════════ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --font-ui:   'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --chrome-h:  48px;
+  --modebar-h: 52px;
+  --sidebar-w: 220px;
 
-      /* Chrome */
-      --chrome-h:   48px;
-      --sidebar-w:  240px;
+  --bg:         #f9f8f6;
+  --chrome-bg:  #ffffff;
+  --sidebar-bg: #f3f2ef;
+  --surface:    #ffffff;
+  --ink-1: #1a1714;
+  --ink-2: #4a4540;
+  --ink-3: #8a8480;
+  --ink-4: #b8b3ac;
+  --border:    rgba(26,23,20,0.08);
+  --border-md: rgba(26,23,20,0.13);
+  --accent:    #c84b2f;
+  --accent-b:  #2b6cb0;
+  --hover:     rgba(26,23,20,0.05);
+  --active:    rgba(26,23,20,0.09);
+  --rs:  6px; --rm: 10px; --rl: 14px;
+  --sh-sm: 0 1px 4px rgba(0,0,0,.07),0 0 0 1px rgba(0,0,0,.04);
+  --sh-md: 0 4px 20px rgba(0,0,0,.1),0 1px 4px rgba(0,0,0,.05);
+  --sh-lg: 0 12px 40px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.06);
+  --ease: cubic-bezier(0.16,1,0.3,1);
 
-      /* Colors */
-      --bg:         #f9f8f6;
-      --chrome-bg:  #ffffff;
-      --sidebar-bg: #f3f2ef;
-      --surface:    #ffffff;
+  /* safe area */
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
 
-      --ink-1: #1a1714;
-      --ink-2: #4a4540;
-      --ink-3: #8a8480;
-      --ink-4: #b8b3ac;
+html,body { height:100%; font-family:var(--font-ui); background:var(--bg); color:var(--ink-1); overflow:hidden; -webkit-font-smoothing:antialiased; }
 
-      --border:     rgba(26,23,20,0.08);
-      --border-md:  rgba(26,23,20,0.13);
-      --accent:     #c84b2f;
-      --accent-blue:#2b6cb0;
-      --hover:      rgba(26,23,20,0.05);
-      --active:     rgba(26,23,20,0.09);
+/* ════════════════════════════════════════════════════
+   APP SHELL
+════════════════════════════════════════════════════ */
+#app { display:flex; flex-direction:column; height:100%; }
 
-      --radius-sm:  6px;
-      --radius-md:  10px;
-      --radius-lg:  14px;
-      --shadow-sm:  0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);
-      --shadow-md:  0 4px 20px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.05);
-      --shadow-lg:  0 12px 40px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06);
-      --ease:       cubic-bezier(0.16,1,0.3,1);
-    }
+/* ════════════════════════════════════════════════════
+   CHROME — 상단바 (모바일 스크롤 가능)
+════════════════════════════════════════════════════ */
+#chrome {
+  flex-shrink:0;
+  height:var(--chrome-h);
+  background:var(--chrome-bg);
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  padding:0 4px 0 8px;
+  z-index:100;
+  user-select:none;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+  gap:0;
+}
+#chrome::-webkit-scrollbar { display:none; }
 
-    html, body {
-      height: 100%;
-      font-family: var(--font-ui);
-      background: var(--bg);
-      color: var(--ink-1);
-      overflow: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
+/* 홈버튼 */
+#home-btn {
+  flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  width:34px; height:34px;
+  border-radius:var(--rs); border:none; background:transparent;
+  color:var(--ink-2); cursor:pointer; font-size:17px; text-decoration:none;
+  transition:background .12s;
+}
+#home-btn:hover { background:var(--hover); }
 
-    /* ════════════════════════════════════════════════
-       APP SHELL
-    ════════════════════════════════════════════════ */
-    #app {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
+.chrome-sep { flex-shrink:0; width:1px; height:18px; background:var(--border-md); margin:0 4px; }
 
-    /* ════════════════════════════════════════════════
-       TOP CHROME — 메뉴바
-    ════════════════════════════════════════════════ */
-    #chrome {
-      flex-shrink: 0;
-      height: var(--chrome-h);
-      background: var(--chrome-bg);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 0;
-      padding: 0 8px 0 12px;
-      z-index: 100;
-      user-select: none;
-    }
+/* 제목 */
+#doc-title-input {
+  flex-shrink:0;
+  min-width:80px; max-width:180px;
+  border:none; background:transparent;
+  font-family:var(--font-ui); font-size:14px; font-weight:600; color:var(--ink-1);
+  outline:none; padding:6px 6px;
+  border-radius:var(--rs); transition:background .12s;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+#doc-title-input:hover { background:var(--hover); }
+#doc-title-input:focus { background:var(--active); }
 
-    /* 홈 버튼 */
-    #home-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 34px; height: 34px;
-      border-radius: var(--radius-sm);
-      border: none;
-      background: transparent;
-      color: var(--ink-2);
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: background .12s;
-      font-size: 17px;
-      text-decoration: none;
-    }
-    #home-btn:hover { background: var(--hover); }
+#save-status { flex-shrink:0; font-size:11px; color:var(--ink-4); font-family:var(--font-mono); padding:0 3px; white-space:nowrap; }
 
-    .chrome-sep {
-      width: 1px; height: 18px;
-      background: var(--border-md);
-      margin: 0 6px;
-      flex-shrink: 0;
-    }
+.chrome-btns { display:flex; align-items:center; gap:2px; flex-shrink:0; }
+.cbtn {
+  flex-shrink:0;
+  display:flex; align-items:center; gap:5px;
+  padding:5px 9px; border-radius:var(--rs); border:none;
+  background:transparent; font-family:var(--font-ui); font-size:12px; font-weight:500;
+  color:var(--ink-2); cursor:pointer; white-space:nowrap;
+  transition:background .12s,color .12s;
+}
+.cbtn:hover  { background:var(--hover); color:var(--ink-1); }
+.cbtn:active { background:var(--active); }
+.cbtn.primary { background:var(--ink-1); color:#fff; }
+.cbtn.primary:hover { background:#2a2520; }
+.cbtn svg { opacity:.7; flex-shrink:0; }
+.cbtn.primary svg { opacity:.9; }
 
-    /* 제목 입력 */
-    #doc-title-input {
-      flex: 1;
-      min-width: 0;
-      border: none;
-      background: transparent;
-      font-family: var(--font-ui);
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--ink-1);
-      outline: none;
-      padding: 6px 8px;
-      border-radius: var(--radius-sm);
-      transition: background .12s;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    #doc-title-input:hover { background: var(--hover); }
-    #doc-title-input:focus { background: var(--active); }
+/* ════════════════════════════════════════════════════
+   MAIN AREA
+════════════════════════════════════════════════════ */
+#main { flex:1; display:flex; overflow:hidden; }
 
-    /* 저장 상태 */
-    #save-status {
-      font-size: 11px;
-      color: var(--ink-4);
-      font-family: var(--font-mono);
-      flex-shrink: 0;
-      padding: 0 4px;
-      white-space: nowrap;
-    }
+/* ════════════════════════════════════════════════════
+   SIDEBAR
+════════════════════════════════════════════════════ */
+#sidebar {
+  width:var(--sidebar-w); flex-shrink:0;
+  background:var(--sidebar-bg); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; overflow:hidden;
+  transition:width .25s var(--ease),opacity .25s;
+}
+#sidebar.collapsed { width:0; opacity:0; pointer-events:none; }
 
-    /* 크롬 버튼 그룹 */
-    .chrome-btns {
-      display: flex;
-      align-items: center;
-      gap: 2px;
-      flex-shrink: 0;
-    }
-    .cbtn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      border-radius: var(--radius-sm);
-      border: none;
-      background: transparent;
-      font-family: var(--font-ui);
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--ink-2);
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background .12s, color .12s;
-    }
-    .cbtn:hover { background: var(--hover); color: var(--ink-1); }
-    .cbtn:active { background: var(--active); }
-    .cbtn.primary {
-      background: var(--ink-1);
-      color: #fff;
-    }
-    .cbtn.primary:hover { background: #2a2520; }
-    .cbtn svg { opacity: 0.7; flex-shrink: 0; }
-    .cbtn.primary svg { opacity: 0.9; }
+#sidebar-header { padding:12px 12px 8px; flex-shrink:0; }
+#sidebar-title { font-size:10px; font-weight:600; color:var(--ink-4); text-transform:uppercase; letter-spacing:.08em; padding:0 4px; margin-bottom:6px; }
+#add-page-btn {
+  display:flex; align-items:center; gap:8px;
+  width:100%; padding:7px 10px; border-radius:var(--rs); border:none;
+  background:transparent; font-family:var(--font-ui); font-size:12px; font-weight:500;
+  color:var(--ink-3); cursor:pointer; transition:background .12s,color .12s;
+}
+#add-page-btn:hover { background:var(--hover); color:var(--ink-1); }
 
-    /* ════════════════════════════════════════════════
-       MAIN AREA — 사이드바 + 에디터
-    ════════════════════════════════════════════════ */
-    #main {
-      flex: 1;
-      display: flex;
-      overflow: hidden;
-    }
+#page-list { flex:1; overflow-y:auto; padding:4px 8px 12px; }
+#page-list::-webkit-scrollbar { width:4px; }
+#page-list::-webkit-scrollbar-thumb { background:rgba(26,23,20,.12); border-radius:2px; }
 
-    /* ════════════════════════════════════════════════
-       SIDEBAR — 페이지 목록
-    ════════════════════════════════════════════════ */
-    #sidebar {
-      width: var(--sidebar-w);
-      flex-shrink: 0;
-      background: var(--sidebar-bg);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      transition: width .25s var(--ease), opacity .25s;
-    }
-    #sidebar.collapsed {
-      width: 0;
-      opacity: 0;
-      pointer-events: none;
-    }
+.page-item {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 10px; border-radius:var(--rs); cursor:pointer; transition:background .1s; position:relative;
+}
+.page-item:hover { background:rgba(26,23,20,.05); }
+.page-item.active { background:rgba(26,23,20,.08); }
+.page-item-thumb {
+  width:28px; height:36px; background:#fff; border:1px solid var(--border-md);
+  border-radius:3px; flex-shrink:0; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  font-size:7px; color:var(--ink-4); box-shadow:var(--sh-sm);
+}
+.page-item-thumb canvas,.page-item-thumb img { width:100%; height:100%; object-fit:cover; }
+.page-item-info { flex:1; min-width:0; }
+.page-item-label { font-size:12px; font-weight:500; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.page-item-sub { font-size:10px; color:var(--ink-4); margin-top:1px; font-family:var(--font-mono); }
+.page-item-menu {
+  width:24px; height:24px; border-radius:5px; border:none;
+  background:transparent; color:var(--ink-4); cursor:pointer;
+  display:none; align-items:center; justify-content:center; transition:background .1s,color .1s; flex-shrink:0;
+}
+.page-item:hover .page-item-menu { display:flex; }
+.page-item-menu:hover { background:var(--active); color:var(--ink-1); }
 
-    #sidebar-header {
-      padding: 12px 12px 8px;
-      flex-shrink: 0;
-    }
-    #sidebar-title {
-      font-size: 10px;
-      font-weight: 600;
-      color: var(--ink-4);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 0 4px;
-      margin-bottom: 6px;
-    }
-    #add-page-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-      padding: 7px 10px;
-      border-radius: var(--radius-sm);
-      border: none;
-      background: transparent;
-      font-family: var(--font-ui);
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--ink-3);
-      cursor: pointer;
-      transition: background .12s, color .12s;
-    }
-    #add-page-btn:hover { background: var(--hover); color: var(--ink-1); }
+/* ════════════════════════════════════════════════════
+   EDITOR AREA
+════════════════════════════════════════════════════ */
+#editor-area,
+#editor-area.mode-pan,
+#editor-area.mode-annotate,
+#editor-area.mode-text,
+#editor-area.mode-lasso {
+  flex:1; display:flex; flex-direction:column; overflow:hidden;
+  background:var(--bg); position:relative;
+}
 
-    #page-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 4px 8px 12px;
-    }
-    #page-list::-webkit-scrollbar { width: 4px; }
-    #page-list::-webkit-scrollbar-thumb { background: rgba(26,23,20,0.12); border-radius: 2px; }
+/* ════════════════════════════════════════════════════
+   VIEWER
+════════════════════════════════════════════════════ */
+#viewer {
+  flex:1; overflow-y:auto; overflow-x:hidden;
+  display:flex; flex-direction:column; align-items:center;
+  padding:24px 16px calc(var(--modebar-h) + 24px + var(--sab));
+  gap:20px; scroll-behavior:smooth;
+  /* 터치 스크롤은 JS에서 모드에 따라 제어 */
+}
+#viewer::-webkit-scrollbar { width:6px; }
+#viewer::-webkit-scrollbar-track { background:transparent; }
+#viewer::-webkit-scrollbar-thumb { background:rgba(26,23,20,.15); border-radius:3px; }
 
-    .page-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: background .1s;
-      position: relative;
-    }
-    .page-item:hover { background: rgba(26,23,20,0.05); }
-    .page-item.active { background: rgba(26,23,20,0.08); }
+/* ════════════════════════════════════════════════════
+   MODE BAR — 하단 플로팅 모드/도구 바
+   (기존 #toolbar + #annot-toolbar 완전 대체)
+════════════════════════════════════════════════════ */
+#mode-bar {
+  position:absolute;
+  bottom:calc(8px + var(--sab));
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:2px;
+  background:rgba(255,255,255,0.96);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--border-md);
+  border-radius:99px;
+  padding:5px 8px;
+  box-shadow:var(--sh-lg);
+  z-index:300;
+  user-select:none;
+  max-width:calc(100vw - 32px);
+  overflow-x:auto;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+  white-space:nowrap;
+}
+#mode-bar::-webkit-scrollbar { display:none; }
 
-    .page-item-thumb {
-      width: 28px; height: 36px;
-      background: #fff;
-      border: 1px solid var(--border-md);
-      border-radius: 3px;
-      flex-shrink: 0;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 7px;
-      color: var(--ink-4);
-      box-shadow: var(--shadow-sm);
-    }
-    .page-item-thumb canvas {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .page-item-thumb img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+/* 모드바 섹션 구분선 */
+.mb-sep { flex-shrink:0; width:1px; height:20px; background:var(--border-md); margin:0 3px; }
 
-    .page-item-info {
-      flex: 1;
-      min-width: 0;
-    }
-    .page-item-label {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--ink-2);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .page-item-sub {
-      font-size: 10px;
-      color: var(--ink-4);
-      margin-top: 1px;
-      font-family: var(--font-mono);
-    }
+/* 모드 버튼 */
+.mb-mode {
+  flex-shrink:0;
+  display:flex; align-items:center; gap:5px;
+  padding:6px 12px; border-radius:99px; border:none;
+  background:transparent; font-family:var(--font-ui);
+  font-size:12px; font-weight:500; color:var(--ink-3);
+  cursor:pointer; white-space:nowrap; transition:background .12s,color .12s;
+}
+.mb-mode:hover { background:var(--hover); color:var(--ink-2); }
+.mb-mode.active { background:var(--ink-1); color:#fff; }
+.mb-mode svg { pointer-events:none; flex-shrink:0; }
 
-    .page-item-menu {
-      width: 24px; height: 24px;
-      border-radius: 5px;
-      border: none;
-      background: transparent;
-      color: var(--ink-4);
-      cursor: pointer;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      transition: background .1s, color .1s;
-      flex-shrink: 0;
-    }
-    .page-item:hover .page-item-menu { display: flex; }
-    .page-item-menu:hover { background: var(--active); color: var(--ink-1); }
+/* 도구 버튼 (그리기 모드에서만 표시) */
+.mb-tool {
+  flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  width:34px; height:34px; border-radius:50%; border:none;
+  background:transparent; color:var(--ink-3); cursor:pointer;
+  transition:background .12s,color .12s;
+}
+.mb-tool:hover  { background:var(--hover); color:var(--ink-2); }
+.mb-tool.active { background:var(--ink-1); color:#fff; }
+.mb-tool svg { pointer-events:none; }
 
-    /* ════════════════════════════════════════════════
-       EDITOR AREA
-    ════════════════════════════════════════════════ */
-    #editor-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: var(--bg);
-    }
+/* 색상 점 */
+.mb-cdot {
+  flex-shrink:0;
+  width:16px; height:16px; border-radius:50%;
+  border:2px solid transparent; cursor:pointer;
+  transition:transform .1s,border-color .1s;
+}
+.mb-cdot.active { border-color:var(--ink-1); transform:scale(1.2); }
 
-    /* 툴바 */
-    #toolbar {
-      flex-shrink: 0;
-      height: 40px;
-      background: var(--chrome-bg);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      padding: 0 12px;
-      gap: 2px;
-      overflow-x: auto;
-      overflow-y: hidden;
-    }
-    #toolbar::-webkit-scrollbar { display: none; }
+/* 굵기 버튼 */
+.mb-sw {
+  flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  width:30px; height:28px; border-radius:6px;
+  border:1px solid var(--border-md); background:var(--surface);
+  cursor:pointer; transition:background .1s;
+}
+.mb-sw.active,.mb-sw:hover { background:var(--active); }
+.mb-sw-line { background:var(--ink-1); border-radius:99px; width:14px; }
 
-    .tb-sep {
-      width: 1px; height: 18px;
-      background: var(--border-md);
-      margin: 0 4px;
-      flex-shrink: 0;
-    }
+/* 불투명도 */
+#mb-opacity-label { font-size:10px; color:var(--ink-3); font-family:var(--font-mono); white-space:nowrap; flex-shrink:0; }
+#mb-opacity { width:56px; height:4px; accent-color:var(--ink-2); cursor:pointer; flex-shrink:0; }
 
-    .tbtn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      min-width: 28px; height: 28px;
-      padding: 0 6px;
-      border-radius: 5px;
-      border: none;
-      background: transparent;
-      color: var(--ink-2);
-      cursor: pointer;
-      font-family: var(--font-ui);
-      font-size: 12px;
-      font-weight: 500;
-      white-space: nowrap;
-      transition: background .1s, color .1s;
-      flex-shrink: 0;
-    }
-    .tbtn:hover { background: var(--hover); color: var(--ink-1); }
-    .tbtn:active, .tbtn.on { background: var(--active); color: var(--ink-1); }
-    .tbtn svg { pointer-events: none; }
+/* 그리기 도구 그룹 (annotate 모드에서만 보임) */
+#mb-draw-group { display:none; align-items:center; gap:2px; }
+#editor-area.mode-annotate #mb-draw-group { display:flex; }
 
-    /* 컬러 피커 닷 */
-    .tb-color-dot {
-      width: 14px; height: 14px;
-      border-radius: 50%;
-      border: 2px solid rgba(26,23,20,0.2);
-      cursor: pointer;
-      flex-shrink: 0;
-    }
+/* 올가미 도구 그룹 */
+#mb-lasso-group { display:none; align-items:center; gap:2px; }
+#editor-area.mode-lasso #mb-lasso-group { display:flex; }
 
-    /* 폰트 사이즈 */
-    #tb-fontsize {
-      width: 40px;
-      height: 26px;
-      border: 1px solid var(--border-md);
-      border-radius: 5px;
-      background: var(--surface);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--ink-1);
-      text-align: center;
-      outline: none;
-      padding: 0 4px;
-    }
+/* 텍스트 서식 그룹 */
+#mb-text-group { display:none; align-items:center; gap:2px; }
+#editor-area.mode-text #mb-text-group { display:flex; }
 
-    /* ── 도구 전환 탭 ── */
-    #mode-tabs {
-      display: flex;
-      align-items: center;
-      gap: 2px;
-      margin-right: 4px;
-      flex-shrink: 0;
-    }
-    .mode-tab {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
-      border-radius: 6px;
-      border: none;
-      background: transparent;
-      font-family: var(--font-ui);
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--ink-3);
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background .12s, color .12s;
-    }
-    .mode-tab:hover { background: var(--hover); color: var(--ink-2); }
-    .mode-tab.active {
-      background: var(--ink-1);
-      color: #fff;
-    }
+/* ════════════════════════════════════════════════════
+   EMPTY STATE
+════════════════════════════════════════════════════ */
+#empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:48px 24px; gap:0; }
+#empty-state.hidden { display:none; }
+.empty-icon { width:72px; height:72px; background:rgba(26,23,20,.06); border-radius:20px; display:flex; align-items:center; justify-content:center; margin-bottom:20px; color:var(--ink-4); }
+.empty-title { font-size:18px; font-weight:600; color:var(--ink-2); margin-bottom:8px; }
+.empty-desc { font-size:13px; color:var(--ink-4); line-height:1.7; max-width:300px; margin-bottom:24px; }
+.empty-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.empty-btn {
+  display:flex; align-items:center; gap:7px;
+  padding:9px 18px; border-radius:8px; border:1px solid var(--border-md);
+  background:var(--surface); font-family:var(--font-ui); font-size:13px; font-weight:500;
+  color:var(--ink-2); cursor:pointer; transition:all .15s; box-shadow:var(--sh-sm);
+}
+.empty-btn:hover { border-color:rgba(26,23,20,.22); background:#fff; color:var(--ink-1); }
+.empty-btn.primary { background:var(--ink-1); color:#fff; border-color:var(--ink-1); }
+.empty-btn.primary:hover { background:#2a2520; }
 
-    /* ════════════════════════════════════════════════
-       VIEWER — 스크롤 가능 페이지 뷰
-    ════════════════════════════════════════════════ */
-    #viewer {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 32px 24px 80px;
-      gap: 24px;
-      scroll-behavior: smooth;
-    }
-    #viewer::-webkit-scrollbar { width: 8px; }
-    #viewer::-webkit-scrollbar-track { background: transparent; }
-    #viewer::-webkit-scrollbar-thumb { background: rgba(26,23,20,0.15); border-radius: 4px; }
+/* ════════════════════════════════════════════════════
+   PAGE CARD
+════════════════════════════════════════════════════ */
+.page-card {
+  width:100%; max-width:860px; background:var(--surface);
+  border-radius:var(--rm); box-shadow:var(--sh-sm); border:1px solid var(--border);
+  overflow:hidden; flex-shrink:0; position:relative; transition:box-shadow .2s;
+}
+.page-card:hover { box-shadow:var(--sh-md); }
+.page-card.active-card { box-shadow:0 0 0 2px var(--accent-b),var(--sh-md); }
 
-    /* 빈 상태 */
-    #empty-state {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 48px 24px;
-      gap: 0;
-    }
-    #empty-state.hidden { display: none; }
+.page-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 12px; border-bottom:1px solid var(--border);
+  background:rgba(26,23,20,.02); flex-shrink:0;
+}
+.page-header-left { display:flex; align-items:center; gap:8px; }
+.page-badge { font-size:10px; font-family:var(--font-mono); color:var(--ink-4); background:rgba(26,23,20,.05); padding:2px 7px; border-radius:99px; border:1px solid var(--border); }
+.page-type-badge { font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-4); }
+.page-header-actions { display:flex; align-items:center; gap:2px; }
+.page-action-btn {
+  display:flex; align-items:center; justify-content:center;
+  width:28px; height:28px; border-radius:6px; border:none;
+  background:transparent; color:var(--ink-4); cursor:pointer; transition:background .1s,color .1s;
+}
+.page-action-btn:hover { background:var(--hover); color:var(--ink-2); }
 
-    .empty-icon {
-      width: 72px; height: 72px;
-      background: rgba(26,23,20,0.06);
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      color: var(--ink-4);
-    }
-    .empty-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--ink-2);
-      margin-bottom: 8px;
-    }
-    .empty-desc {
-      font-size: 13px;
-      color: var(--ink-4);
-      line-height: 1.7;
-      max-width: 320px;
-      margin-bottom: 24px;
-    }
-    .empty-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .empty-btn {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 9px 18px;
-      border-radius: 8px;
-      border: 1px solid var(--border-md);
-      background: var(--surface);
-      font-family: var(--font-ui);
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--ink-2);
-      cursor: pointer;
-      transition: all .15s;
-      box-shadow: var(--shadow-sm);
-    }
-    .empty-btn:hover { border-color: rgba(26,23,20,0.22); background: #fff; color: var(--ink-1); }
-    .empty-btn.primary {
-      background: var(--ink-1);
-      color: #fff;
-      border-color: var(--ink-1);
-    }
-    .empty-btn.primary:hover { background: #2a2520; }
+.page-body { position:relative; }
+.page-canvas-wrap { display:block; width:100%; position:relative; line-height:0; }
+.page-canvas-wrap canvas { display:block; width:100%; height:auto; }
+.page-canvas-wrap img   { display:block; width:100%; height:auto; }
 
-    /* ════════════════════════════════════════════════
-       PAGE CARD — 각 페이지
-    ════════════════════════════════════════════════ */
-    .page-card {
-      width: 100%;
-      max-width: 860px;
-      background: var(--surface);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--border);
-      overflow: hidden;
-      flex-shrink: 0;
-      position: relative;
-      transition: box-shadow .2s;
-    }
-    .page-card:hover { box-shadow: var(--shadow-md); }
-    .page-card.active-card { box-shadow: 0 0 0 2px var(--accent-blue), var(--shadow-md); }
+/* 주석 SVG 오버레이 */
+.annot-svg-wrap { position:absolute; inset:0; pointer-events:none; z-index:10; overflow:hidden; }
+.annot-overlay { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.annot-overlay.drawing-mode  { pointer-events:all; cursor:crosshair; touch-action:none; }
+.annot-overlay.eraser-mode   { pointer-events:all; cursor:cell;      touch-action:none; }
 
-    /* 페이지 헤더 */
-    .page-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(26,23,20,0.02);
-      flex-shrink: 0;
-    }
-    .page-header-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .page-badge {
-      font-size: 10px;
-      font-family: var(--font-mono);
-      color: var(--ink-4);
-      background: rgba(26,23,20,0.05);
-      padding: 2px 8px;
-      border-radius: 99px;
-      border: 1px solid var(--border);
-    }
-    .page-type-badge {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--ink-4);
-    }
-    .page-header-actions {
-      display: flex;
-      align-items: center;
-      gap: 2px;
-    }
-    .page-action-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px; height: 28px;
-      border-radius: 6px;
-      border: none;
-      background: transparent;
-      color: var(--ink-4);
-      cursor: pointer;
-      transition: background .1s, color .1s;
-    }
-    .page-action-btn:hover { background: var(--hover); color: var(--ink-2); }
+/* 오버레이 레이어 (포스트잇 · 카드) */
+.page-overlay-layer { position:absolute; inset:0; pointer-events:none; z-index:20; overflow:hidden; }
 
-    /* 페이지 본체 */
-    .page-body {
-      position: relative;
-    }
+/* 빈 페이지 편집 */
+.blank-editor {
+  min-height:500px; padding:36px 48px; outline:none;
+  font-family:var(--font-ui); font-size:14px; line-height:1.8;
+  color:var(--ink-1); caret-color:var(--accent-b);
+}
+.blank-editor:empty::before { content:attr(data-placeholder); color:var(--ink-4); pointer-events:none; }
+.blank-editor h1 { font-size:26px; font-weight:700; margin:8px 0 4px; line-height:1.3; }
+.blank-editor h2 { font-size:20px; font-weight:600; margin:8px 0 4px; line-height:1.35; }
+.blank-editor h3 { font-size:16px; font-weight:600; margin:6px 0 4px; line-height:1.4; }
+.blank-editor p  { margin:2px 0; }
+.blank-editor ul,.blank-editor ol { margin:4px 0 4px 24px; }
+.blank-editor li { margin:2px 0; }
+.blank-editor blockquote { border-left:3px solid var(--border-md); padding-left:16px; margin:8px 0; color:var(--ink-3); font-style:italic; }
+.blank-editor code { font-family:var(--font-mono); font-size:12px; background:rgba(26,23,20,.06); padding:1px 5px; border-radius:4px; }
+.blank-editor pre { font-family:var(--font-mono); font-size:12px; background:rgba(26,23,20,.05); border:1px solid var(--border); border-radius:8px; padding:14px 18px; margin:8px 0; white-space:pre-wrap; }
+.blank-editor a  { color:var(--accent-b); text-decoration:underline; }
+.blank-editor hr { border:none; border-top:2px solid var(--border-md); margin:16px 0; }
+.blank-editor img { max-width:100%; border-radius:6px; margin:6px 0; }
 
-    /* PDF / 이미지 렌더 */
-    .page-canvas-wrap {
-      display: block;
-      width: 100%;
-      position: relative;
-      line-height: 0;
-    }
-    .page-canvas-wrap canvas {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-    .page-canvas-wrap img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
+/* ════════════════════════════════════════════════════
+   STICKY NOTE
+════════════════════════════════════════════════════ */
+.doc-sticky {
+  position:absolute; width:200px; min-height:130px; border-radius:6px;
+  box-shadow:0 4px 16px rgba(0,0,0,.13),0 1px 3px rgba(0,0,0,.07);
+  display:flex; flex-direction:column; pointer-events:all; z-index:30;
+  transition:box-shadow .15s;
+}
+.doc-sticky:hover { box-shadow:0 8px 28px rgba(0,0,0,.18),0 2px 6px rgba(0,0,0,.08); }
+.doc-sticky-bar { display:flex; align-items:center; justify-content:space-between; padding:5px 7px 4px; cursor:grab; border-radius:6px 6px 0 0; background:rgba(0,0,0,.06); flex-shrink:0; touch-action:none; }
+.doc-sticky-bar:active { cursor:grabbing; }
+.doc-sticky-btn { display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:4px; border:none; background:transparent; color:rgba(0,0,0,.45); cursor:pointer; font-size:10px; transition:background .1s,color .1s; }
+.doc-sticky-btn:hover { background:rgba(0,0,0,.1); color:rgba(0,0,0,.7); }
+.doc-sticky-close:hover { background:rgba(200,75,47,.15); color:var(--accent); }
+.doc-sticky-ta { flex:1; border:none; background:transparent; resize:none; padding:8px 10px 10px; font-family:var(--font-ui); font-size:13px; line-height:1.6; color:rgba(0,0,0,.75); outline:none; min-height:80px; }
+.doc-sticky-ta::placeholder { color:rgba(0,0,0,.3); }
 
-    /* SVG 주석 오버레이 */
-    .annot-overlay {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 10;
-    }
-    .annot-overlay.drawing-mode {
-      pointer-events: all;
-      cursor: crosshair;
-    }
-    .annot-overlay.eraser-mode {
-      pointer-events: all;
-      cursor: cell;
-    }
+/* ════════════════════════════════════════════════════
+   CARD WINDOW
+════════════════════════════════════════════════════ */
+.doc-card { position:absolute; width:280px; min-height:180px; background:#fff; border:1px solid var(--border-md); border-radius:var(--rm); box-shadow:var(--sh-md); display:flex; flex-direction:column; pointer-events:all; z-index:30; overflow:hidden; }
+.doc-card:hover { box-shadow:var(--sh-lg); }
+.doc-card-header { display:flex; align-items:center; gap:6px; padding:8px 10px; background:rgba(26,23,20,.03); border-bottom:1px solid var(--border); cursor:grab; flex-shrink:0; touch-action:none; }
+.doc-card-header:active { cursor:grabbing; }
+.doc-card-title { flex:1; min-width:0; font-size:12px; font-weight:600; color:var(--ink-1); outline:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:text; }
+.doc-card-title:empty::before { content:attr(data-placeholder); color:var(--ink-4); pointer-events:none; }
+.doc-card-actions { display:flex; align-items:center; gap:2px; flex-shrink:0; }
+.doc-card-btn { display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:4px; border:none; background:transparent; color:var(--ink-4); cursor:pointer; font-size:10px; transition:background .1s,color .1s; }
+.doc-card-btn:hover { background:var(--hover); color:var(--ink-2); }
+.doc-card-close:hover { background:rgba(200,75,47,.1); color:var(--accent); }
+.doc-card-body { padding:10px 12px; font-size:12px; line-height:1.7; color:var(--ink-2); outline:none; min-height:60px; cursor:text; }
+.doc-card-body:empty::before { content:attr(data-placeholder); color:var(--ink-4); pointer-events:none; }
+.doc-card-sub-container { padding:6px 10px 8px; display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
+.doc-sub-block { position:relative; background:rgba(26,23,20,.03); border:1px solid var(--border); border-radius:6px; overflow:hidden; min-height:70px; }
+.doc-sub-header { display:flex; align-items:center; gap:4px; padding:5px 7px; background:rgba(26,23,20,.04); border-bottom:1px solid var(--border); cursor:grab; touch-action:none; }
+.doc-sub-header:active { cursor:grabbing; }
+.doc-sub-title { flex:1; font-size:10px; font-weight:600; color:var(--ink-2); outline:none; }
+.doc-sub-title:empty::before { content:attr(data-placeholder); color:var(--ink-4); pointer-events:none; font-weight:400; }
+.doc-sub-content { padding:6px 8px; font-size:11px; line-height:1.6; color:var(--ink-2); outline:none; min-height:36px; }
+.doc-sub-content:empty::before { content:attr(data-placeholder); color:var(--ink-4); pointer-events:none; }
+.doc-card-resize { position:absolute; right:0; bottom:0; width:16px; height:16px; cursor:se-resize; background:linear-gradient(135deg,transparent 50%,rgba(26,23,20,.15) 50%); border-radius:0 0 var(--rm) 0; touch-action:none; }
 
-    /* 빈 페이지 편집 영역 */
-    .blank-editor {
-      min-height: 600px;
-      padding: 40px 52px;
-      outline: none;
-      font-family: var(--font-ui);
-      font-size: 14px;
-      line-height: 1.8;
-      color: var(--ink-1);
-      caret-color: var(--accent-blue);
-    }
-    .blank-editor:empty::before {
-      content: attr(data-placeholder);
-      color: var(--ink-4);
-      pointer-events: none;
-    }
+/* ════════════════════════════════════════════════════
+   LASSO (올가미 선택)
+════════════════════════════════════════════════════ */
+#lasso-svg {
+  position:fixed; inset:0; width:100%; height:100%;
+  pointer-events:none; z-index:250;
+  display:none;
+}
+#lasso-svg.active { pointer-events:all; cursor:crosshair; display:block; }
+#lasso-path { fill:rgba(43,108,176,.08); stroke:rgba(43,108,176,.6); stroke-width:1.5; stroke-dasharray:5 3; }
 
-    /* 텍스트 블록 스타일 */
-    .blank-editor h1 { font-size: 26px; font-weight: 700; margin: 8px 0 4px; color: var(--ink-1); line-height: 1.3; }
-    .blank-editor h2 { font-size: 20px; font-weight: 600; margin: 8px 0 4px; color: var(--ink-1); line-height: 1.35; }
-    .blank-editor h3 { font-size: 16px; font-weight: 600; margin: 6px 0 4px; color: var(--ink-1); line-height: 1.4; }
-    .blank-editor p  { margin: 2px 0; }
-    .blank-editor ul, .blank-editor ol { margin: 4px 0 4px 24px; }
-    .blank-editor li { margin: 2px 0; }
-    .blank-editor blockquote {
-      border-left: 3px solid var(--border-md);
-      padding-left: 16px;
-      margin: 8px 0;
-      color: var(--ink-3);
-      font-style: italic;
-    }
-    .blank-editor code {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      background: rgba(26,23,20,0.06);
-      padding: 1px 5px;
-      border-radius: 4px;
-    }
-    .blank-editor pre {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      background: rgba(26,23,20,0.05);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 18px;
-      margin: 8px 0;
-      white-space: pre-wrap;
-      overflow-x: auto;
-    }
-    .blank-editor a { color: var(--accent-blue); text-decoration: underline; }
-    .blank-editor hr { border: none; border-top: 2px solid var(--border-md); margin: 16px 0; }
-    .blank-editor img { max-width: 100%; border-radius: 6px; margin: 6px 0; }
+/* ════════════════════════════════════════════════════
+   toolOrb (무한캔버스에서 완전 이식)
+════════════════════════════════════════════════════ */
+#doc-orb {
+  position:fixed;
+  width:52px; height:52px;
+  border-radius:50%;
+  /* JS에서 transform으로 위치 제어 */
+  z-index:8000;
+  pointer-events:none;
+  touch-action:none;
+  transition:box-shadow .15s;
+}
+#doc-orb.orb-visible {
+  pointer-events:all;
+  background:rgba(26,23,20,.88);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  box-shadow:0 4px 20px rgba(0,0,0,.35),0 0 0 1.5px rgba(255,255,255,.13);
+}
+#doc-orb.orb-active { box-shadow:0 4px 20px rgba(0,0,0,.45),0 0 0 2px rgba(255,255,255,.35); }
+#doc-orb.orb-tool-on { box-shadow:0 0 0 3px rgba(43,108,176,.6),0 4px 20px rgba(0,0,0,.35); }
 
-    /* ════════════════════════════════════════════════
-       그리기 툴바 (주석 모드)
-    ════════════════════════════════════════════════ */
-    #annot-toolbar {
-      display: none;
-      flex-shrink: 0;
-      height: 40px;
-      background: var(--chrome-bg);
-      border-bottom: 1px solid var(--border);
-      align-items: center;
-      padding: 0 12px;
-      gap: 4px;
-    }
-    #annot-toolbar.visible { display: flex; }
+/* Orb 스폰 애니메이션 */
+@keyframes orb-spawn { 0%{transform:translate(var(--ox),var(--oy)) scale(0)} 60%{transform:translate(var(--ox),var(--oy)) scale(1.12)} 100%{transform:translate(var(--ox),var(--oy)) scale(1)} }
+#doc-orb.orb-spawning { animation:orb-spawn .25s var(--ease) forwards; }
 
-    .annot-color {
-      width: 18px; height: 18px;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      cursor: pointer;
-      transition: transform .1s, border-color .1s;
-    }
-    .annot-color.active { border-color: var(--ink-1); transform: scale(1.15); }
-    .annot-sw {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px; height: 28px;
-      border-radius: 5px;
-      border: 1px solid var(--border-md);
-      background: var(--surface);
-      cursor: pointer;
-      transition: background .1s;
-    }
-    .annot-sw.active, .annot-sw:hover { background: var(--active); }
-    .annot-sw-line {
-      background: var(--ink-1);
-      border-radius: 99px;
-      width: 16px;
-    }
-    #annot-opacity-label {
-      font-size: 11px;
-      color: var(--ink-3);
-      font-family: var(--font-mono);
-      white-space: nowrap;
-    }
-    #annot-opacity {
-      width: 64px;
-      height: 4px;
-      accent-color: var(--ink-2);
-      cursor: pointer;
-    }
+#doc-orb-label { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,.9); pointer-events:none; }
+#doc-orb-badge { position:absolute; bottom:-18px; left:50%; transform:translateX(-50%); font-size:9px; font-weight:600; color:rgba(26,23,20,.7); background:rgba(255,255,255,.9); padding:2px 7px; border-radius:99px; white-space:nowrap; pointer-events:none; font-family:var(--font-ui); box-shadow:0 1px 4px rgba(0,0,0,.12); opacity:0; transition:opacity .15s; }
+#doc-orb.orb-active #doc-orb-badge { opacity:1; }
 
-    /* ════════════════════════════════════════════════
-       페이지 컨텍스트 메뉴 (드롭다운)
-    ════════════════════════════════════════════════ */
-    #page-ctx-menu {
-      position: fixed;
-      background: var(--surface);
-      border: 1px solid var(--border-md);
-      border-radius: var(--radius-md);
-      padding: 5px;
-      box-shadow: var(--shadow-lg);
-      z-index: 9000;
-      min-width: 180px;
-      display: none;
-    }
-    #page-ctx-menu.open { display: block; }
-    .ctx-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 13px;
-      color: var(--ink-1);
-      cursor: pointer;
-      transition: background .1s;
-    }
-    .ctx-item:hover { background: var(--hover); }
-    .ctx-item.danger { color: var(--accent); }
-    .ctx-item.danger:hover { background: rgba(200,75,47,0.06); }
-    .ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
+/* 방향 힌트 링 */
+#doc-orb-ring {
+  position:fixed; border-radius:50%;
+  border:1.5px dashed rgba(26,23,20,.18);
+  pointer-events:none; z-index:7999;
+  transform:translate(-50%,-50%);
+  opacity:0; transition:opacity .2s;
+}
+#doc-orb-ring.hint-visible { opacity:1; }
 
-    /* ════════════════════════════════════════════════
-       SNACKBAR
-    ════════════════════════════════════════════════ */
-    #snack {
-      position: fixed;
-      bottom: 28px;
-      left: 50%;
-      transform: translateX(-50%) translateY(12px);
-      background: rgba(26,23,20,0.92);
-      color: #fff;
-      font-size: 13px;
-      font-family: var(--font-ui);
-      padding: 10px 20px;
-      border-radius: 99px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity .2s, transform .2s;
-      z-index: 9999;
-      white-space: nowrap;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-    }
-    #snack.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
-    #snack.error { background: var(--accent); }
+/* orb-preview-ghost */
+#doc-orb-ghost {
+  position:fixed; z-index:8001;
+  background:rgba(26,23,20,.82); backdrop-filter:blur(8px);
+  border-radius:10px; padding:8px 10px;
+  pointer-events:none; display:flex; align-items:center; justify-content:center;
+  transform:translate(0,-50%);
+  opacity:0; transition:opacity .15s;
+}
+#doc-orb-ghost.ghost-active { opacity:1; }
 
-    /* ════════════════════════════════════════════════
-       사이드바 토글 버튼
-    ════════════════════════════════════════════════ */
-    #sidebar-toggle-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 30px; height: 30px;
-      border-radius: var(--radius-sm);
-      border: none;
-      background: transparent;
-      color: var(--ink-3);
-      cursor: pointer;
-      transition: background .12s, color .12s;
-      flex-shrink: 0;
-    }
-    #sidebar-toggle-btn:hover { background: var(--hover); color: var(--ink-1); }
+/* edit mode border */
+#doc-edit-border {
+  position:fixed; inset:0; z-index:9800;
+  border:3px solid transparent;
+  pointer-events:none;
+  border-radius:0;
+  transition:border-color .2s;
+}
+#doc-edit-border.active { border-color:rgba(43,108,176,.45); }
 
-    /* ════════════════════════════════════════════════
-       드래그 오버레이
-    ════════════════════════════════════════════════ */
-    #drop-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 8000;
-      background: rgba(43,108,176,0.07);
-      border: 3px dashed rgba(43,108,176,0.4);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-    }
-    #drop-overlay.active { display: flex; }
-    #drop-overlay .drop-msg {
-      background: rgba(255,255,255,0.96);
-      backdrop-filter: blur(10px);
-      padding: 20px 40px;
-      border-radius: 16px;
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--ink-2);
-      box-shadow: var(--shadow-md);
-    }
+#doc-edit-badge {
+  position:fixed; top:60px; left:50%; transform:translateX(-50%);
+  background:rgba(43,108,176,.9); color:#fff;
+  font-size:11px; font-weight:600; padding:4px 14px; border-radius:99px;
+  pointer-events:none; opacity:0; transition:opacity .2s;
+  z-index:9801; font-family:var(--font-ui);
+}
+#doc-edit-badge.active { opacity:1; }
 
-    /* 로딩 오버레이 */
-    #loading-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 9500;
-      background: rgba(249,248,246,0.7);
-      backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-    }
-    #loading-overlay.active { display: flex; }
-    #loading-box {
-      background: var(--surface);
-      border: 1px solid var(--border-md);
-      border-radius: var(--radius-lg);
-      padding: 24px 36px;
-      box-shadow: var(--shadow-lg);
-      text-align: center;
-    }
-    .loading-spinner {
-      width: 32px; height: 32px;
-      border: 3px solid var(--border-md);
-      border-top-color: var(--ink-2);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      margin: 0 auto 14px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #loading-text {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--ink-2);
-    }
+/* ════════════════════════════════════════════════════
+   PAGE CONTEXT MENU
+════════════════════════════════════════════════════ */
+#page-ctx-menu {
+  position:fixed; background:var(--surface); border:1px solid var(--border-md);
+  border-radius:var(--rm); padding:5px; box-shadow:var(--sh-lg);
+  z-index:9000; min-width:180px; display:none;
+}
+#page-ctx-menu.open { display:block; }
+.ctx-item { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:6px; font-size:13px; color:var(--ink-1); cursor:pointer; transition:background .1s; }
+.ctx-item:hover { background:var(--hover); }
+.ctx-item.danger { color:var(--accent); }
+.ctx-item.danger:hover { background:rgba(200,75,47,.06); }
+.ctx-sep { height:1px; background:var(--border); margin:4px 0; }
 
-    /* ════════════════════════════════════════════════
-       줌 컨트롤 (오른쪽 하단)
-    ════════════════════════════════════════════════ */
-    #zoom-ctrl {
-      position: fixed;
-      right: 20px;
-      bottom: 24px;
-      display: flex;
-      align-items: center;
-      gap: 2px;
-      background: var(--surface);
-      border: 1px solid var(--border-md);
-      border-radius: var(--radius-md);
-      padding: 4px;
-      box-shadow: var(--shadow-md);
-      z-index: 200;
-      user-select: none;
-    }
-    .zc-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px; height: 28px;
-      border-radius: 6px;
-      border: none;
-      background: transparent;
-      color: var(--ink-2);
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      transition: background .1s;
-    }
-    .zc-btn:hover { background: var(--hover); }
-    #zoom-label {
-      font-size: 11px;
-      font-family: var(--font-mono);
-      color: var(--ink-3);
-      padding: 0 6px;
-      min-width: 40px;
-      text-align: center;
-      cursor: default;
-    }
+/* ════════════════════════════════════════════════════
+   SNACKBAR
+════════════════════════════════════════════════════ */
+#snack {
+  position:fixed; bottom:calc(var(--modebar-h) + 16px + var(--sab)); left:50%;
+  transform:translateX(-50%) translateY(12px);
+  background:rgba(26,23,20,.92); color:#fff;
+  font-size:13px; font-family:var(--font-ui); padding:10px 20px;
+  border-radius:99px; pointer-events:none; opacity:0;
+  transition:opacity .2s,transform .2s; z-index:9999;
+  white-space:nowrap; backdrop-filter:blur(8px);
+  box-shadow:0 4px 16px rgba(0,0,0,.2);
+}
+#snack.visible { opacity:1; transform:translateX(-50%) translateY(0); }
+#snack.error   { background:var(--accent); }
 
-    /* ════════════════════════════════════════════════
-       반응형
-    ════════════════════════════════════════════════ */
-    @media (max-width: 768px) {
-      :root { --sidebar-w: 220px; }
-      #sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 50; }
-      #sidebar:not(.collapsed) { box-shadow: var(--shadow-lg); }
-      .blank-editor { padding: 24px 24px; }
-    }
+/* ════════════════════════════════════════════════════
+   사이드바 토글
+════════════════════════════════════════════════════ */
+#sidebar-toggle-btn {
+  flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:var(--rs); border:none;
+  background:transparent; color:var(--ink-3); cursor:pointer;
+  transition:background .12s,color .12s;
+}
+#sidebar-toggle-btn:hover { background:var(--hover); color:var(--ink-1); }
+
+/* ════════════════════════════════════════════════════
+   DROP OVERLAY
+════════════════════════════════════════════════════ */
+#drop-overlay { position:fixed; inset:0; z-index:8000; background:rgba(43,108,176,.07); border:3px dashed rgba(43,108,176,.4); display:none; align-items:center; justify-content:center; pointer-events:none; }
+#drop-overlay.active { display:flex; }
+#drop-overlay .drop-msg { background:rgba(255,255,255,.96); backdrop-filter:blur(10px); padding:20px 40px; border-radius:16px; font-size:15px; font-weight:600; color:var(--ink-2); box-shadow:var(--sh-md); }
+
+/* ════════════════════════════════════════════════════
+   LOADING OVERLAY
+════════════════════════════════════════════════════ */
+#loading-overlay { position:fixed; inset:0; z-index:9500; background:rgba(249,248,246,.7); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; }
+#loading-overlay.active { display:flex; }
+#loading-box { background:var(--surface); border:1px solid var(--border-md); border-radius:var(--rl); padding:24px 36px; box-shadow:var(--sh-lg); text-align:center; }
+.loading-spinner { width:32px; height:32px; border:3px solid var(--border-md); border-top-color:var(--ink-2); border-radius:50%; animation:spin .7s linear infinite; margin:0 auto 14px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+#loading-text { font-size:13px; font-weight:500; color:var(--ink-2); }
+
+/* ════════════════════════════════════════════════════
+   줌 컨트롤 (우하단)
+════════════════════════════════════════════════════ */
+#zoom-ctrl {
+  position:fixed; right:16px; bottom:calc(var(--modebar-h) + 12px + var(--sab));
+  display:flex; align-items:center; gap:2px;
+  background:var(--surface); border:1px solid var(--border-md);
+  border-radius:var(--rm); padding:4px; box-shadow:var(--sh-md);
+  z-index:301; user-select:none;
+}
+.zc-btn { display:flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; border:none; background:transparent; color:var(--ink-2); cursor:pointer; font-size:13px; font-weight:600; transition:background .1s; }
+.zc-btn:hover { background:var(--hover); }
+#zoom-label { font-size:10px; font-family:var(--font-mono); color:var(--ink-3); padding:0 5px; min-width:38px; text-align:center; cursor:default; }
+
+/* ════════════════════════════════════════════════════
+   반응형
+════════════════════════════════════════════════════ */
+@media (max-width:768px) {
+  :root { --sidebar-w:0px; }
+  #sidebar { position:fixed; left:0; top:0; bottom:0; z-index:150; width:220px; }
+  #sidebar:not(.collapsed) { box-shadow:var(--sh-lg); opacity:1; pointer-events:all; }
+  #sidebar.collapsed { width:0; }
+  .blank-editor { padding:24px 20px; }
+  #viewer { padding:16px 8px calc(var(--modebar-h) + 20px + var(--sab)); }
+  #zoom-ctrl { right:8px; }
+}
   </style>
 </head>
 <body>
 
 <div id="app">
 
-  <!-- ══ TOP CHROME ══ -->
+  <!-- ══ CHROME ══ -->
   <header id="chrome">
     <a href="index.html" id="home-btn" title="홈으로">∞</a>
     <div class="chrome-sep"></div>
@@ -925,27 +602,17 @@
     <input id="doc-title-input" type="text" value="제목 없는 문서" spellcheck="false" autocomplete="off">
     <span id="save-status"></span>
     <div class="chrome-btns">
-      <button class="cbtn" id="chrome-open-btn" title="파일 열기">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-          <path d="M1.5 4H4.5L5.5 2.5H11V10.5H1.5V4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
-          <path d="M6.5 6V9M5 7.5L6.5 9L8 7.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+      <button class="cbtn" id="chrome-open-btn">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 4H4.5L5.5 2.5H11V10.5H1.5V4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 6V9M5 7.5L6.5 9L8 7.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         열기
       </button>
-      <button class="cbtn" id="chrome-add-blank-btn" title="빈 페이지 추가">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-          <rect x="1.5" y="1.5" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
-          <path d="M6.5 4V9M4 6.5H9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-        </svg>
+      <button class="cbtn" id="chrome-add-blank-btn">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 4V9M4 6.5H9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
         빈 페이지
       </button>
       <div class="chrome-sep"></div>
-      <button class="cbtn primary" id="chrome-save-btn" title="저장">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-          <path d="M2 1.5H9L11 3.5V11C11 11.5 10.6 12 10 12H3C2.4 12 2 11.5 2 11V1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
-          <rect x="4.5" y="1.5" width="3" height="3.5" rx="0.5" stroke="currentColor" stroke-width="1.2"/>
-          <rect x="4" y="7.5" width="5" height="3.5" rx="0.5" stroke="currentColor" stroke-width="1.2"/>
-        </svg>
+      <button class="cbtn primary" id="chrome-save-btn" title="저장 (Ctrl+S)">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 1.5H9L11 3.5V11C11 11.5 10.6 12 10 12H3C2.4 12 2 11.5 2 11V1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><rect x="4.5" y="1.5" width="3" height="3.5" rx="0.5" stroke="currentColor" stroke-width="1.2"/><rect x="4" y="7.5" width="5" height="3.5" rx="0.5" stroke="currentColor" stroke-width="1.2"/></svg>
         저장
       </button>
     </div>
@@ -954,187 +621,23 @@
   <!-- ══ MAIN ══ -->
   <div id="main">
 
-    <!-- ── 사이드바 ── -->
+    <!-- 사이드바 -->
     <aside id="sidebar">
       <div id="sidebar-header">
         <div id="sidebar-title">페이지</div>
         <button id="add-page-btn">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M6.5 2V11M2 6.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2V11M2 6.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           페이지 추가
         </button>
       </div>
-      <div id="page-list">
-        <!-- JS로 주입 -->
-      </div>
+      <div id="page-list"></div>
     </aside>
 
-    <!-- ── 에디터 영역 ── -->
+    <!-- 에디터 영역 -->
     <div id="editor-area">
-
-      <!-- 텍스트 서식 툴바 -->
-      <div id="toolbar">
-        <!-- 모드 탭 -->
-        <div id="mode-tabs">
-          <button class="mode-tab active" data-mode="text" title="텍스트 편집">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 3H10M6 3V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-            </svg>
-            텍스트
-          </button>
-          <button class="mode-tab" data-mode="annotate" title="주석 그리기">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M8.5 2L10 3.5L4 9.5L2 10L2.5 8L8.5 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
-            </svg>
-            주석
-          </button>
-        </div>
-        <div class="tb-sep"></div>
-
-        <!-- 텍스트 서식 (text 모드에서만 활성) -->
-        <div id="text-fmt-btns" style="display:flex;align-items:center;gap:2px;">
-          <!-- 헤딩 -->
-          <select id="tb-heading" style="height:26px;border:1px solid var(--border-md);border-radius:5px;background:var(--surface);font-family:var(--font-ui);font-size:11px;color:var(--ink-2);padding:0 4px;outline:none;cursor:pointer;">
-            <option value="">본문</option>
-            <option value="h1">제목 1</option>
-            <option value="h2">제목 2</option>
-            <option value="h3">제목 3</option>
-          </select>
-          <div class="tb-sep"></div>
-          <button class="tbtn" id="tb-bold" title="굵게 (Ctrl+B)"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><text x="1" y="11" font-family="serif" font-size="12" font-weight="700" fill="currentColor">B</text></svg></button>
-          <button class="tbtn" id="tb-italic" title="기울임 (Ctrl+I)"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><text x="3" y="11" font-family="serif" font-size="12" font-style="italic" fill="currentColor">I</text></svg></button>
-          <button class="tbtn" id="tb-underline" title="밑줄 (Ctrl+U)"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><text x="2" y="10" font-family="serif" font-size="12" text-decoration="underline" fill="currentColor">U</text><line x1="1" y1="12.5" x2="12" y2="12.5" stroke="currentColor" stroke-width="1.2"/></svg></button>
-          <button class="tbtn" id="tb-strike" title="취소선"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><text x="2" y="10" font-family="serif" font-size="12" fill="currentColor" opacity="0.5">S</text><line x1="1" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.4"/></svg></button>
-          <div class="tb-sep"></div>
-          <button class="tbtn" id="tb-ul" title="글머리 기호">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <circle cx="2.5" cy="3.5" r="1" fill="currentColor"/>
-              <circle cx="2.5" cy="6.5" r="1" fill="currentColor"/>
-              <circle cx="2.5" cy="9.5" r="1" fill="currentColor"/>
-              <path d="M5 3.5H11M5 6.5H11M5 9.5H9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button class="tbtn" id="tb-ol" title="번호 목록">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <text x="0.5" y="5" font-size="5" fill="currentColor" font-family="monospace">1.</text>
-              <text x="0.5" y="8.5" font-size="5" fill="currentColor" font-family="monospace">2.</text>
-              <text x="0.5" y="12" font-size="5" fill="currentColor" font-family="monospace">3.</text>
-              <path d="M6 3.5H11M6 6.5H11M6 9.5H9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button class="tbtn" id="tb-quote" title="인용문">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M2 2V11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M5 4H11M5 7H10M5 10H8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button class="tbtn" id="tb-code" title="인라인 코드">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M4 4L1.5 6.5L4 9M9 4L11.5 6.5L9 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          <div class="tb-sep"></div>
-          <button class="tbtn" id="tb-align-left" title="왼쪽 정렬">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M1 3H12M1 6H9M1 9H11M1 12H7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button class="tbtn" id="tb-align-center" title="가운데 정렬">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M1 3H12M2.5 6H10.5M1 9H12M3.5 12H9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <div class="tb-sep"></div>
-          <button class="tbtn" id="tb-hr" title="구분선">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M1 6.5H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <path d="M3 3.5H10M3 9.5H10" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
-            </svg>
-          </button>
-          <button class="tbtn" id="tb-link" title="링크 삽입">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M5 8L8 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-              <path d="M7 3.5L8.5 2C9.3 1.2 10.5 1.2 11.3 2C12.1 2.8 12.1 4 11.3 4.8L9.8 6.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-              <path d="M6 9.5L4.5 11C3.7 11.8 2.5 11.8 1.7 11C0.9 10.2 0.9 9 1.7 8.2L3.2 6.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Undo/Redo -->
-        <div class="tb-sep"></div>
-        <button class="tbtn" id="tb-undo" title="실행 취소 (Ctrl+Z)">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M2 5L4.5 2.5M2 5L4.5 7.5M2 5H8C10.2 5 12 6.8 12 9C12 11.2 10.2 13 8 13H5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <button class="tbtn" id="tb-redo" title="다시 실행 (Ctrl+Shift+Z)">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M11 5L8.5 2.5M11 5L8.5 7.5M11 5H5C2.8 5 1 6.8 1 9C1 11.2 2.8 13 5 13H8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-      </div>
-
-      <!-- 주석 툴바 -->
-      <div id="annot-toolbar">
-        <span style="font-size:11px;font-weight:600;color:var(--ink-4);letter-spacing:0.06em;text-transform:uppercase;margin-right:4px;flex-shrink:0;">주석</span>
-        <div class="tb-sep"></div>
-        <button class="tbtn on" id="at-pen" data-tool="pen" title="펜">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M9 2L11 4L4 11L2 11.5L2.5 9.5L9 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <button class="tbtn" id="at-highlight" data-tool="highlight" title="형광펜">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <rect x="2.5" y="4" width="8" height="5" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
-            <path d="M5.5 9V11M7.5 9V11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-          </svg>
-        </button>
-        <button class="tbtn" id="at-eraser" data-tool="eraser" title="지우개">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M2 11H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            <path d="M7.5 3L10 5.5L5.5 10H3L2.5 9.5L7 3.5L7.5 3Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <div class="tb-sep"></div>
-        <!-- 색상 -->
-        <div id="annot-colors" style="display:flex;align-items:center;gap:5px;">
-          <div class="annot-color active" data-c="#1a1714" style="background:#1a1714;"></div>
-          <div class="annot-color" data-c="#c84b2f" style="background:#c84b2f;"></div>
-          <div class="annot-color" data-c="#2b6cb0" style="background:#2b6cb0;"></div>
-          <div class="annot-color" data-c="#2d8a4e" style="background:#2d8a4e;"></div>
-          <div class="annot-color" data-c="#7c3d9e" style="background:#7c3d9e;"></div>
-          <div class="annot-color" data-c="#e8a320" style="background:#e8a320;"></div>
-        </div>
-        <div class="tb-sep"></div>
-        <!-- 굵기 -->
-        <div id="annot-sws" style="display:flex;align-items:center;gap:3px;">
-          <div class="annot-sw active" data-sw="2"><div class="annot-sw-line" style="height:2px;"></div></div>
-          <div class="annot-sw" data-sw="5"><div class="annot-sw-line" style="height:4px;"></div></div>
-          <div class="annot-sw" data-sw="10"><div class="annot-sw-line" style="height:7px;"></div></div>
-        </div>
-        <div class="tb-sep"></div>
-        <!-- 불투명도 -->
-        <span id="annot-opacity-label">100%</span>
-        <input type="range" id="annot-opacity" min="10" max="100" step="10" value="100">
-        <div class="tb-sep"></div>
-        <button class="tbtn" id="at-undo" title="주석 취소 (Ctrl+Z)">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M2 5L4.5 2.5M2 5L4.5 7.5M2 5H8C10.2 5 12 6.8 12 9C12 11.2 10.2 13 8 13H5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <button class="tbtn tbtn-danger" id="at-clear" title="이 페이지 주석 지우기" style="color:var(--accent);">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M2 4H11L10 11.5H3L2 4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
-            <path d="M1 4H12M4.5 4V2.5H8.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-      </div>
 
       <!-- 뷰어 -->
       <div id="viewer">
-
-        <!-- 빈 상태 -->
         <div id="empty-state">
           <div class="empty-icon">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
@@ -1143,32 +646,144 @@
             </svg>
           </div>
           <div class="empty-title">문서가 비어있습니다</div>
-          <div class="empty-desc">
-            PDF나 이미지를 열거나,<br>빈 페이지를 추가해 바로 작성하세요
-          </div>
+          <div class="empty-desc">PDF나 이미지를 열거나,<br>빈 페이지를 추가해 바로 작성하세요</div>
           <div class="empty-actions">
             <button class="empty-btn primary" id="empty-open-btn">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M2 5.5H5.5L6.5 3.5H12V11H2V5.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-              </svg>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5.5H5.5L6.5 3.5H12V11H2V5.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
               파일 열기 (PDF / 이미지)
             </button>
             <button class="empty-btn" id="empty-blank-btn">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <rect x="2" y="1.5" width="10" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
-                <path d="M7 5V9M5 7H9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-              </svg>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="1.5" width="10" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M7 5V9M5 7H9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
               빈 페이지 추가
             </button>
           </div>
         </div>
+      </div>
 
-      </div><!-- /#viewer -->
+      <!-- ══ MODE BAR — 하단 플로팅 통합 모드바 ══ -->
+      <div id="mode-bar">
+        <!-- 모드 선택 탭 -->
+        <button class="mb-mode active" data-mode="pan" title="이동 모드 (V)">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5V11.5M1.5 6.5H11.5M4 4L2 6.5L4 9M9 4L11 6.5L9 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          이동
+        </button>
+        <button class="mb-mode" data-mode="annotate" title="필기 모드 (A)">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M9 2L11 4L4 11L2 11.5L2.5 9.5L9 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          필기
+        </button>
+        <button class="mb-mode" data-mode="text" title="텍스트 모드 (T)">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3H11M6.5 3V10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          텍스트
+        </button>
+        <button class="mb-mode" data-mode="lasso" title="올가미 모드 (L)">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5C2 4 4 2 6.5 2C9 2 11 4 11 6.5C11 8.5 9.5 10 7.5 11L6.5 11.5L5.5 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="2 1.5"/></svg>
+          올가미
+        </button>
+
+        <div class="mb-sep"></div>
+
+        <!-- 필기 도구 그룹 (annotate 모드만) -->
+        <div id="mb-draw-group">
+          <button class="mb-tool active" data-tool="pen" title="펜 (P)">
+            <svg width="15" height="15" viewBox="0 0 13 13" fill="none"><path d="M9 2L11 4L4 11L2 11.5L2.5 9.5L9 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="mb-tool" data-tool="highlight" title="형광펜 (H)">
+            <svg width="15" height="15" viewBox="0 0 13 13" fill="none"><rect x="2.5" y="4" width="8" height="5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 9V11M7.5 9V11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </button>
+          <button class="mb-tool" data-tool="eraser" title="지우개 (E)">
+            <svg width="15" height="15" viewBox="0 0 13 13" fill="none"><path d="M2 11H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7.5 3L10 5.5L5.5 10H3L2.5 9.5L7 3.5L7.5 3Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          </button>
+
+          <div class="mb-sep"></div>
+
+          <!-- 색상 -->
+          <div id="mb-colors" style="display:flex;align-items:center;gap:5px;">
+            <div class="mb-cdot active" data-c="#1a1714" style="background:#1a1714;"></div>
+            <div class="mb-cdot" data-c="#c84b2f" style="background:#c84b2f;"></div>
+            <div class="mb-cdot" data-c="#2b6cb0" style="background:#2b6cb0;"></div>
+            <div class="mb-cdot" data-c="#2d8a4e" style="background:#2d8a4e;"></div>
+            <div class="mb-cdot" data-c="#7c3d9e" style="background:#7c3d9e;"></div>
+            <div class="mb-cdot" data-c="#e8a320" style="background:#e8a320;"></div>
+          </div>
+
+          <div class="mb-sep"></div>
+
+          <!-- 굵기 -->
+          <div style="display:flex;align-items:center;gap:3px;">
+            <div class="mb-sw active" data-sw="2"><div class="mb-sw-line" style="height:2px;"></div></div>
+            <div class="mb-sw" data-sw="5"><div class="mb-sw-line" style="height:4px;"></div></div>
+            <div class="mb-sw" data-sw="10"><div class="mb-sw-line" style="height:7px;"></div></div>
+          </div>
+
+          <div class="mb-sep"></div>
+
+          <!-- 불투명도 -->
+          <span id="mb-opacity-label">100%</span>
+          <input type="range" id="mb-opacity" min="10" max="100" step="10" value="100">
+
+          <div class="mb-sep"></div>
+
+          <button class="mb-tool" id="mb-undo" title="주석 취소">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 5L4.5 2.5M2 5L4.5 7.5M2 5H8C10.2 5 12 6.8 12 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="mb-tool" id="mb-clear" title="이 페이지 주석 지우기" style="color:var(--accent);">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 4H11L10 11.5H3L2 4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M1 4H12M4.5 4V2.5H8.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+
+        <!-- 텍스트 서식 그룹 (text 모드만) -->
+        <div id="mb-text-group">
+          <select id="mb-heading" style="height:26px;border:1px solid var(--border-md);border-radius:5px;background:var(--surface);font-family:var(--font-ui);font-size:11px;color:var(--ink-2);padding:0 4px;outline:none;cursor:pointer;flex-shrink:0;">
+            <option value="">본문</option>
+            <option value="h1">제목1</option>
+            <option value="h2">제목2</option>
+            <option value="h3">제목3</option>
+          </select>
+          <div class="mb-sep"></div>
+          <button class="mb-tool" id="mb-bold"   title="굵게"><b style="font-size:12px;">B</b></button>
+          <button class="mb-tool" id="mb-italic" title="기울임"><i style="font-size:12px;">I</i></button>
+          <button class="mb-tool" id="mb-ul"     title="목록">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="2.5" cy="3.5" r="1" fill="currentColor"/><circle cx="2.5" cy="6.5" r="1" fill="currentColor"/><circle cx="2.5" cy="9.5" r="1" fill="currentColor"/><path d="M5 3.5H11M5 6.5H11M5 9.5H9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </button>
+          <button class="mb-tool" id="mb-quote"  title="인용">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2V11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 4H11M5 7H10M5 10H8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </button>
+          <div class="mb-sep"></div>
+          <button class="mb-tool" id="mb-tb-undo" title="취소"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 5L4.5 2.5M2 5L4.5 7.5M2 5H8C10.2 5 12 6.8 12 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="mb-tool" id="mb-tb-redo" title="다시실행"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 5L8.5 2.5M11 5L8.5 7.5M11 5H5C2.8 5 1 6.8 1 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+
+        <!-- 올가미 그룹 (lasso 모드만) -->
+        <div id="mb-lasso-group">
+          <button class="mb-tool" id="mb-lasso-select-all" title="전체 선택">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2 1.5"/></svg>
+          </button>
+          <button class="mb-tool" id="mb-lasso-delete" title="선택 삭제" style="color:var(--accent);">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 4H11L10 11.5H3L2 4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M1 4H12M4.5 4V2.5H8.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+
+        <div class="mb-sep"></div>
+
+        <!-- 포스트잇 · 카드 추가 -->
+        <button class="mb-tool" id="mb-sticky-btn" title="포스트잇 추가">
+          <svg width="15" height="15" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="1" fill="#fef3c7" stroke="#d97706" stroke-width="1.2"/><path d="M4 4.5H9M4 6.5H9M4 8.5H7" stroke="#d97706" stroke-width="1.1" stroke-linecap="round"/></svg>
+        </button>
+        <button class="mb-tool" id="mb-card-btn" title="카드 추가">
+          <svg width="15" height="15" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="1.5" y="1.5" width="10" height="3.5" rx="1.5" fill="currentColor" opacity="0.2"/><path d="M4 7.5H9M4 9.5H7.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
     </div><!-- /#editor-area -->
   </div><!-- /#main -->
 </div><!-- /#app -->
 
-<!-- ── 페이지 컨텍스트 메뉴 ── -->
+<!-- 올가미 SVG -->
+<svg id="lasso-svg" viewBox="0 0 1 1" preserveAspectRatio="none">
+  <path id="lasso-path" d=""/>
+</svg>
+
+<!-- 페이지 컨텍스트 메뉴 -->
 <div id="page-ctx-menu">
   <div class="ctx-item" id="ctx-add-before">
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 4V9M4 6.5H9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -1177,6 +792,15 @@
   <div class="ctx-item" id="ctx-add-after">
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 4V9M4 6.5H9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
     뒤에 빈 페이지 추가
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-add-sticky">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="1" fill="#fef9c3" stroke="#d97706" stroke-width="1.2"/><path d="M4 4.5H9M4 6.5H9M4 8.5H7" stroke="#d97706" stroke-width="1.1" stroke-linecap="round"/></svg>
+    포스트잇 추가
+  </div>
+  <div class="ctx-item" id="ctx-add-card">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="1.5" y="1.5" width="10" height="3.5" rx="1.5" fill="currentColor" opacity="0.2"/><path d="M4 7.5H9M4 9.5H7.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+    카드 추가
   </div>
   <div class="ctx-sep"></div>
   <div class="ctx-item" id="ctx-move-up">
@@ -1199,12 +823,10 @@
   </div>
 </div>
 
-<!-- ── 드롭 오버레이 ── -->
-<div id="drop-overlay">
-  <div class="drop-msg">📄 파일을 여기에 놓으세요</div>
-</div>
+<!-- Drop overlay -->
+<div id="drop-overlay"><div class="drop-msg">📄 파일을 여기에 놓으세요</div></div>
 
-<!-- ── 로딩 오버레이 ── -->
+<!-- Loading overlay -->
 <div id="loading-overlay">
   <div id="loading-box">
     <div class="loading-spinner"></div>
@@ -1212,18 +834,28 @@
   </div>
 </div>
 
-<!-- ── 스낵바 ── -->
+<!-- Snackbar -->
 <div id="snack"></div>
 
-<!-- ── 줌 컨트롤 ── -->
+<!-- 줌 컨트롤 -->
 <div id="zoom-ctrl">
-  <button class="zc-btn" id="zc-out" title="축소">−</button>
+  <button class="zc-btn" id="zc-out">−</button>
   <span id="zoom-label">100%</span>
-  <button class="zc-btn" id="zc-in" title="확대">+</button>
-  <button class="zc-btn" id="zc-fit" title="맞추기" style="font-size:10px;font-weight:600;">FIT</button>
+  <button class="zc-btn" id="zc-in">+</button>
+  <button class="zc-btn" id="zc-fit" style="font-size:9px;font-weight:700;">FIT</button>
 </div>
 
-<!-- ── 파일 입력 ── -->
+<!-- toolOrb DOM -->
+<div id="doc-orb">
+  <div id="doc-orb-label"></div>
+  <div id="doc-orb-badge"></div>
+</div>
+<div id="doc-orb-ring"></div>
+<div id="doc-orb-ghost"></div>
+<div id="doc-edit-border"></div>
+<div id="doc-edit-badge">필기 모드</div>
+
+<!-- 파일 입력 -->
 <input type="file" id="file-in" accept=".pdf,image/*" style="display:none" multiple>
 
 <script type="module" src="js/doc-main.js"></script>
